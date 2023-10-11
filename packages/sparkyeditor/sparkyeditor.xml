@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension version="4.0" type="plugin" group="content" method="upgrade">
+    <name>Content - Sparky Content Plugin</name>
+    <author>HotThemes</author>
+    <creationDate>January 2021</creationDate>
+    <copyright>Copyright 2021 by HotThemes.</copyright>
+	<license>GNU/GPLv3 http://www.gnu.org/licenses/gpl-3.0.html</license>
+    <authorEmail>info@hotjoomlatemplates.com</authorEmail>
+    <authorUrl>https://www.hotjoomlatemplates.com</authorUrl>
+    <version>1.2.2</version>
+    <description>Sparky Page Builder content plugin</description>
+    <scriptfile>install.php</scriptfile>
+    <files>
+        <filename plugin="sparkyeditor">sparkyeditor.php</filename>
+    </files>
+	<languages folder="languages">
+		<language tag="en-GB">en-GB/en-GB.plg_content_sparkyeditor.ini</language>
+		<language tag="en-GB">en-GB/en-GB.plg_content_sparkyeditor.sys.ini</language>
+	</languages>
+    <config>
+		<fields name="params">
+			<fieldset name="basic">
+				<field type="spacer" label="Color values entered here will be replaced with CSS vars in inline CSS of Joomla articles." />
+				<field name="templateColor1" type="color" label="Template Color 1" default=""/>
+				<field name="templateColor2" type="color" label="Template Color 2" default=""/>
+				<field name="templateColor3" type="color" label="Template Color 3" default=""/>
+				<field name="templateColor4" type="color" label="Template Color 4" default=""/>
+				<field name="templateColor5" type="color" label="Template Color 5" default=""/>
+				<field name="templateColor6" type="color" label="Template Color 6" default=""/>
+			</fieldset>
+		</fields>
+	</config>
+</extension>

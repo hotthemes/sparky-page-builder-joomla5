@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<extension type="package" version="3.0" method="upgrade">
+	<name>Sparky Page Builder Package</name>
+	<author>HotThemes</author>
+	<creationDate>January 2021</creationDate>
+	<license>GNU/GPLv3 http://www.gnu.org/licenses/gpl-3.0.html</license>
+	<packagename>sparky_page_builder</packagename>
+	<version>1.2.2</version>
+	<url>https://www.hotjoomlatemplates.com/</url>
+	<packager>HotThemes</packager>
+	<packagerurl>https://www.hotjoomlatemplates.com/</packagerurl>
+	<description>Sparky Page Builder plugins package.</description>
+	<updateservers>
+        <server type="extension" priority="1" name="Sparky Page Builder Package">https://update.hotjoomlatemplates.com/pagebuilder/sparky_update5x.xml</server>
+    </updateservers>
+	<files folder="packages">
+		<file type="plugin" id="sparky" group="editors">sparky</file>
+		<file type="plugin" id="sparkyeditor" group="content">sparkyeditor</file>
+	</files>
+</extension>

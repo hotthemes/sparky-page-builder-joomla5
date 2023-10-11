@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension version="4.0" type="plugin" group="editors" method="upgrade">
+	<name>Editor - Sparky Page Builder</name>
+	<version>1.2.2</version>
+	<creationDate>January 2021</creationDate>
+	<author>HotThemes</author>
+	<authorEmail>info@hotjoomlatemplates.com</authorEmail>
+	<authorUrl>https://www.hotjoomlatemplates.com</authorUrl>
+	<copyright>Copyright (C) 2021 HotThemes. All rights reserved.</copyright>
+	<license>GNU/GPLv3 http://www.gnu.org/licenses/gpl-3.0.html</license>
+	<description>Sparky Page Builder editor plugin</description>
+	<files>
+		<filename plugin="sparky">sparky.php</filename>
+	</files>
+	<media destination="plg_editors_sparky" folder="media">
+		<folder>css</folder>
+		<folder>images</folder>
+		<folder>js</folder>
+	</media>
+	<languages folder="languages">
+		<language tag="en-GB">en-GB/en-GB.plg_editors_sparky.ini</language>
+		<language tag="en-GB">en-GB/en-GB.plg_editors_sparky.sys.ini</language>
+	</languages>
+</extension>

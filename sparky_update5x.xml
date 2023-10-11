@@ -1,0 +1,28 @@
+<updates>
+	<update>
+		<name>Sparky Page Builder</name>
+		<description>Sparky Page Builder package</description>
+		<version>1.3.0</version>
+		<infourl title="Sparky Page Builder">https://www.hotjoomlatemplates.com/page-builder</infourl>
+		<downloads>
+			<downloadurl type="full" format="zip">https://update.hotjoomlatemplates.com/pagebuilder/pkg_sparky_page_builder5x.zip</downloadurl>
+		</downloads>
+		<targetplatform name="joomla" version="4.[0123456789]"/>
+		<element>pkg_sparky_page_builder</element>
+		<type>package</type>
+		<client>0</client>		
+	</update>
+	<update>
+		<name>Sparky Page Builder</name>
+		<description>Sparky Page Builder package</description>
+		<version>1.3.0</version>
+		<infourl title="Sparky Page Builder">https://www.hotjoomlatemplates.com/page-builder</infourl>
+		<downloads>
+			<downloadurl type="full" format="zip">https://update.hotjoomlatemplates.com/pagebuilder/pkg_sparky_page_builder5x.zip</downloadurl>
+		</downloads>
+		<targetplatform name="joomla" version="5.[0123456789]"/>
+		<element>pkg_sparky_page_builder</element>
+		<type>package</type>
+		<client>0</client>		
+	</update>
+</updates>
