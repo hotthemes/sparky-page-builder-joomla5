@@ -237,7 +237,7 @@ class PlgEditorSparky extends CMSPlugin
         <label><input type="checkbox" name="row_fluid" id="row_fluid"> Fluid Row</label>
         <div>Background Image</div>
         <p style="font-size:13px;">To use this in front-end, enable option Content > Articles > Options > Editing Layout > "Frontend Images and Links"</p>
-        <joomla-field-media class="field-media-wrapper" type="image" base-path="'.JURI :: root().'" root-folder="images" url="'.$uri->getPath().'?option=com_media&amp;view=media&amp;tmpl=component&amp;fieldid={field-media-id}&amp;path=" modal-container=".modal" modal-width="100%" modal-height="400px" input=".field-media-input" button-select=".button-select" button-clear=".button-clear" button-save-selected=".button-save-selected" preview="static" preview-container=".field-media-preview" preview-width="200" preview-height="200">
+        <joomla-field-media class="field-media-wrapper" type="image" base-path="'.URI :: root().'" root-folder="images" url="'.$uri->getPath().'?option=com_media&amp;view=media&amp;tmpl=component&amp;fieldid={field-media-id}&amp;path=" modal-container=".modal" modal-width="100%" modal-height="400px" input=".field-media-input" button-select=".button-select" button-clear=".button-clear" button-save-selected=".button-save-selected" preview="static" preview-container=".field-media-preview" preview-width="200" preview-height="200">
           <div id="imageModal_jform_images_image_intro" role="dialog" tabindex="-1" class="joomla-modal modal fade" data-url="'.$uri->getPath().'?option=com_media&amp;view=media&amp;tmpl=component&amp;asset=89&amp;author=149&amp;fieldid={field-media-id}&amp;path=" data-iframe="<iframe class=&quot;iframe&quot; src=&quot;index.php?option=com_media&amp;amp;view=media&amp;amp;tmpl=component&amp;amp;fieldid={field-media-id}&amp;amp;path=&quot; name=&quot;Change Image&quot; title=&quot;Change Image&quot; height=&quot;100%&quot; width=&quot;100%&quot;></iframe>">
           <div class="modal-dialog modal-lg jviewport-width80">
             <div class="modal-content">
@@ -366,7 +366,7 @@ class PlgEditorSparky extends CMSPlugin
       <div class="sparky_modal-body">
         <div>Background Image:</div>
         <p style="font-size:13px;">To use this in front-end, enable option Content > Articles > Options > Editing Layout > "Frontend Images and Links"</p>
-        <joomla-field-media class="field-media-wrapper" type="image" base-path="'.JURI :: root().'" root-folder="images" url="'.$uri->getPath().'?option=com_media&amp;view=media&amp;tmpl=component&amp;fieldid={field-media-id}&amp;path=" modal-container=".modal" modal-width="100%" modal-height="400px" input=".field-media-input" button-select=".button-select" button-clear=".button-clear" button-save-selected=".button-save-selected" preview="static" preview-container=".field-media-preview" preview-width="200" preview-height="200">
+        <joomla-field-media class="field-media-wrapper" type="image" base-path="'.URI :: root().'" root-folder="images" url="'.$uri->getPath().'?option=com_media&amp;view=media&amp;tmpl=component&amp;fieldid={field-media-id}&amp;path=" modal-container=".modal" modal-width="100%" modal-height="400px" input=".field-media-input" button-select=".button-select" button-clear=".button-clear" button-save-selected=".button-save-selected" preview="static" preview-container=".field-media-preview" preview-width="200" preview-height="200">
           <div id="imageModal_jform_images_image_intro" role="dialog" tabindex="-1" class="joomla-modal modal fade" data-url="'.$uri->getPath().'?option=com_media&amp;view=media&amp;tmpl=component&amp;asset=89&amp;author=149&amp;fieldid={field-media-id}&amp;path=" data-iframe="<iframe class=&quot;iframe&quot; src=&quot;index.php?option=com_media&amp;amp;view=media&amp;amp;tmpl=component&amp;amp;fieldid={field-media-id}&amp;amp;path=&quot; name=&quot;Change Image&quot; title=&quot;Change Image&quot; height=&quot;100%&quot; width=&quot;100%&quot;></iframe>">
           <div class="modal-dialog modal-lg jviewport-width80">
             <div class="modal-content">
@@ -594,7 +594,7 @@ class PlgEditorSparky extends CMSPlugin
         <label></label>
         <div>Source</div>
         <p style="font-size:13px;">To use this in front-end, enable option Content > Articles > Options > Editing Layout > "Frontend Images and Links"</p>
-        <joomla-field-media class="field-media-wrapper" type="image" base-path="'.JURI :: root().'" root-folder="images" url="'.$uri->getPath().'?option=com_media&amp;view=media&amp;tmpl=component&amp;fieldid={field-media-id}&amp;path=" modal-container=".modal" modal-width="100%" modal-height="400px" input=".field-media-input" button-select=".button-select" button-clear=".button-clear" button-save-selected=".button-save-selected" preview="static" preview-container=".field-media-preview" preview-width="200" preview-height="200">
+        <joomla-field-media class="field-media-wrapper" type="image" base-path="'.URI :: root().'" root-folder="images" url="'.$uri->getPath().'?option=com_media&amp;view=media&amp;tmpl=component&amp;fieldid={field-media-id}&amp;path=" modal-container=".modal" modal-width="100%" modal-height="400px" input=".field-media-input" button-select=".button-select" button-clear=".button-clear" button-save-selected=".button-save-selected" preview="static" preview-container=".field-media-preview" preview-width="200" preview-height="200">
           <div id="imageModal_jform_images_image_intro" role="dialog" tabindex="-1" class="joomla-modal modal fade" data-url="'.$uri->getPath().'?option=com_media&amp;view=media&amp;tmpl=component&amp;asset=89&amp;author=149&amp;fieldid={field-media-id}&amp;path=" data-iframe="<iframe class=&quot;iframe&quot; src=&quot;index.php?option=com_media&amp;amp;view=media&amp;amp;tmpl=component&amp;amp;fieldid={field-media-id}&amp;amp;path=&quot; name=&quot;Change Image&quot; title=&quot;Change Image&quot; height=&quot;100%&quot; width=&quot;100%&quot;></iframe>">
           <div class="modal-dialog modal-lg jviewport-width80">
             <div class="modal-content">
@@ -1288,9 +1288,9 @@ class PlgEditorSparky extends CMSPlugin
 </div>
 
 <script>
-  var joomla_path = "'.JURI :: root().'";
+  var joomla_path = "'.URI :: root().'";
 </script>
-<script src="'.JURI :: root().'media/plg_editors_sparky/js/sparky_editor.js"></script>
+<script src="'.URI :: root().'media/plg_editors_sparky/js/sparky_editor.js"></script>
 ';
 
 		return $editor;
