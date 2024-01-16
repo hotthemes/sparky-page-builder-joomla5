@@ -983,10 +983,10 @@ class PlgEditorSparky extends CMSPlugin
                 <option value="tiktok">TikTok</option>
                 <option value="tumblr">Tumblr</option>
                 <option value="twitch">Twitch</option>
-                <option value="twitter">Twitter</option>
                 <option value="viber">Viber</option>
                 <option value="vimeo">Vimeo</option>
                 <option value="whatsapp">Whatsapp</option>
+                <option value="x-twitter">X (Twitter)</option>
                 <option value="xing">Xing</option>
                 <option value="youtube">YouTube</option>
             </select>
@@ -1027,10 +1027,10 @@ class PlgEditorSparky extends CMSPlugin
                 <option value="tiktok">TikTok</option>
                 <option value="tumblr">Tumblr</option>
                 <option value="twitch">Twitch</option>
-                <option value="twitter">Twitter</option>
                 <option value="viber">Viber</option>
                 <option value="vimeo">Vimeo</option>
                 <option value="whatsapp">Whatsapp</option>
+                <option value="x-twitter">X (Twitter)</option>
                 <option value="xing">Xing</option>
                 <option value="youtube">YouTube</option>
             </select>
@@ -1071,10 +1071,10 @@ class PlgEditorSparky extends CMSPlugin
                 <option value="tiktok">TikTok</option>
                 <option value="tumblr">Tumblr</option>
                 <option value="twitch">Twitch</option>
-                <option value="twitter">Twitter</option>
                 <option value="viber">Viber</option>
                 <option value="vimeo">Vimeo</option>
                 <option value="whatsapp">Whatsapp</option>
+                <option value="x-twitter">X (Twitter)</option>
                 <option value="xing">Xing</option>
                 <option value="youtube">YouTube</option>
             </select>
@@ -1115,10 +1115,10 @@ class PlgEditorSparky extends CMSPlugin
                 <option value="tiktok">TikTok</option>
                 <option value="tumblr">Tumblr</option>
                 <option value="twitch">Twitch</option>
-                <option value="twitter">Twitter</option>
                 <option value="viber">Viber</option>
                 <option value="vimeo">Vimeo</option>
                 <option value="whatsapp">Whatsapp</option>
+                <option value="x-twitter">X (Twitter)</option>
                 <option value="xing">Xing</option>
                 <option value="youtube">YouTube</option>
             </select>
@@ -1159,10 +1159,10 @@ class PlgEditorSparky extends CMSPlugin
                 <option value="tiktok">TikTok</option>
                 <option value="tumblr">Tumblr</option>
                 <option value="twitch">Twitch</option>
-                <option value="twitter">Twitter</option>
                 <option value="viber">Viber</option>
                 <option value="vimeo">Vimeo</option>
                 <option value="whatsapp">Whatsapp</option>
+                <option value="x-twitter">X (Twitter)</option>
                 <option value="xing">Xing</option>
                 <option value="youtube">YouTube</option>
             </select>
@@ -1203,10 +1203,10 @@ class PlgEditorSparky extends CMSPlugin
                 <option value="tiktok">TikTok</option>
                 <option value="tumblr">Tumblr</option>
                 <option value="twitch">Twitch</option>
-                <option value="twitter">Twitter</option>
                 <option value="viber">Viber</option>
                 <option value="vimeo">Vimeo</option>
                 <option value="whatsapp">Whatsapp</option>
+                <option value="x-twitter">X (Twitter)</option>
                 <option value="xing">Xing</option>
                 <option value="youtube">YouTube</option>
             </select>

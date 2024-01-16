@@ -3173,7 +3173,7 @@ function sparky_modal(modal_type) {
                 target: true,
                 network1: "facebook",
                 link1: "https://www.facebook.com/hotthemes",
-                network2: "twitter",
+                network2: "x-twitter",
                 link2: "https://twitter.com/hot_themes",
                 network3: "instagram",
                 link3: "https://instagram.com/hotthemes",
