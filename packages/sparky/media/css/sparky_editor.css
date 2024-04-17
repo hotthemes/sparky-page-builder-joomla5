@@ -822,7 +822,10 @@ input#heading_link, input#image_link, input#button_link, input#icon_link, input#
     margin-bottom: 15px;
 }
 
-
+joomla-dialog.joomla-dialog-media-field dialog[open] {
+    width: 95% !important;
+    height: 95vh !important;
+}
 
 /* Animation */
 
