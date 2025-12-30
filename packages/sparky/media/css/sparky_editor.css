@@ -984,3 +984,13 @@ button.choices__button_joomla {
 .field-media-wrapper div.input-group input[type="text"] {
     border-color: #ccc;
 }
+
+/* white text on white bg */
+
+.sparky_page_row h1[style*="color:rgb(255, 255, 255)"],
+.sparky_page_row h2[style*="color:rgb(255, 255, 255)"],
+.sparky_page_row h3[style*="color:rgb(255, 255, 255)"],
+.sparky_page_row h4[style*="color:rgb(255, 255, 255)"],
+.sparky_page_row p[style*="color:rgb(255, 255, 255)"] {
+    text-shadow: 2px 2px 0 rgba(0,0,0,.3);
+}
