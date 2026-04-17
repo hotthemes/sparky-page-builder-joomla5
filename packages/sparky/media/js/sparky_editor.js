@@ -96,6 +96,16 @@ function normalizeBackgroundImagePaths(content, path) {
         .replaceAll("background-image: url(" + path + "'", "background-image: url('");
 }
 
+function normalizeBoldTagsInHtml(content) {
+    return content
+        .replace(/<b(\s[^>]*)?>/gi, "<strong$1>")
+        .replace(/<\/b>/gi, "</strong>");
+}
+
+function normalizeBoldTagsInElement(element) {
+    element.innerHTML = normalizeBoldTagsInHtml(element.innerHTML);
+}
+
 function createDefaultPageContentArray(initialBlock) {
     return [
         {
@@ -233,7 +243,7 @@ function populateSparkyPageContentArray(sparkyRows) {
                         class: block.className,
                         style: block.style,
                         type: "paragraph",
-                        content: block.innerHTML
+                        content: normalizeBoldTagsInHtml(block.innerHTML)
                     });
                 }
 
@@ -259,7 +269,7 @@ function populateSparkyPageContentArray(sparkyRows) {
                         link: headingLink,
                         target: headingTarget,
                         level: block.nodeName,
-                        content: block.innerHTML
+                        content: normalizeBoldTagsInHtml(block.innerHTML)
                     });
                     
                 }
@@ -346,7 +356,7 @@ function populateSparkyPageContentArray(sparkyRows) {
                         style: block.style,
                         type: "list",
                         listType: block.nodeName.toLowerCase(),
-                        content: block.innerHTML
+                        content: normalizeBoldTagsInHtml(block.innerHTML)
                     });
                 }
 
@@ -1649,6 +1659,9 @@ function sparkyEditorButtonsEvents() {
                 }
 
                 document.execCommand(command, false, null);
+                if (command === "bold") {
+                    normalizeBoldTagsInElement(targetBlock);
+                }
                 targetBlock.dispatchEvent(new Event("input", { bubbles: true }));
             });
         });
