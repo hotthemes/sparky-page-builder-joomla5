@@ -4,8 +4,13 @@
 
 // get sparky editor textarea & editor container
 let sparkyEditorTextarea = document.getElementById("sparkyEditorTextarea");
-let sparkyEditorTextareaValue = document.getElementById("sparkyEditorTextarea").value;
+let sparkyEditorTextareaValue = sparkyEditorTextarea.value;
 let sparkyPageContent = document.getElementById("sparkyPageContent");
+var sparkyPageContentArray;
+
+const SPARKY_DEFAULT_ROW_CLASS = "sparky_page_row sparky_row0";
+const SPARKY_DEFAULT_COLUMN_CLASS = "sparkle12 sparky_cell sparky_col0";
+const SPARKY_DEFAULT_ANIMATION = [ "", 0, "" ];
 
 // get page url (not used anywhere... yet)
 let sparkyPageUrl = window.location.href.split("/administrator/index.php");
@@ -16,8 +21,7 @@ let sparkyBackendUrl = sparkyPageUrl[0] + "/administrator/";
 joomla_path = joomla_path.replace(window.location.origin, "");
 
 // fix Joomla's background-image paths
-sparkyEditorTextareaValue = sparkyEditorTextareaValue.replaceAll('background-image: url('+joomla_path+'"', 'background-image: url("');
-sparkyEditorTextareaValue = sparkyEditorTextareaValue.replaceAll("background-image: url("+joomla_path+"'", "background-image: url('");
+sparkyEditorTextareaValue = normalizeBackgroundImagePaths(sparkyEditorTextareaValue, joomla_path);
 
 
 //// II
@@ -31,6 +35,8 @@ sparkyEditorTextareaValue = sparkyEditorTextareaValue.replaceAll("background-ima
 // parse HTML from textarea to HTML document
 const domparser = new DOMParser();
 const sparkyPageContentParsed = domparser.parseFromString(sparkyEditorTextareaValue, "text/html");
+const sparkyRows = getSparkyRowsFromParsedDocument(sparkyPageContentParsed);
+const firstSparkyRow = getFirstRowNode(sparkyRows);
 
 // accessing parsed HTML with:
 // sparkyPageContentParsed.childNodes[0].childNodes[1].childNodes
@@ -40,27 +46,7 @@ const sparkyPageContentParsed = domparser.parseFromString(sparkyEditorTextareaVa
 if (sparkyEditorTextarea.value === "") {
 
     // if new article, create initial content array
-
-    var sparkyPageContentArray = [];
-    let random_row_class = Math.floor((Math.random() * 100000000));
-
-    sparkyPageContentArray.push({
-        id: "row_" + random_row_class,
-        class: "sparky_page_row sparky_row0",
-        style: {},
-        content: []
-    });
-
-    sparkyPageContentArray[0].content.push({
-        id: "",
-        class: "sparkle12 sparky_cell sparky_col0",
-        style: {},
-        cols: 12,
-        animation: [ "", 0, "" ],
-        content: []
-    });
-
-    sparkyPageContentArray[0].content[0].content.push({
+    sparkyPageContentArray = createDefaultPageContentArray({
         id: "",
         class: "",
         style: {},
@@ -73,38 +59,10 @@ if (sparkyEditorTextarea.value === "") {
 } else {
 
     // check if the first element is a proper Sparky row
-    if (
-        !sparkyPageContentParsed.childNodes[0].childNodes[1].childNodes[0].id
-        ||
-        !sparkyPageContentParsed.childNodes[0].childNodes[1].childNodes[0].className
-        ||
-        !sparkyPageContentParsed.childNodes[0].childNodes[1].childNodes[0].className.includes("sparky_row0")
-        ||
-        !sparkyPageContentParsed.childNodes[0].childNodes[1].childNodes[0].className.includes("sparky_page_row")
-    ) {
+    if (!isSparkyFirstRow(firstSparkyRow)) {
 
         alert("This content is not created with the Sparky Page Builder!\n\nThe initial layout will be created and the existing content will be in a Custom HTML block.\n\nIf you don't want to edit this with  Sparky Page Builder, click OK and then close without saving.");
-
-        var sparkyPageContentArray = [];
-        let random_row_class = Math.floor((Math.random() * 100000000));
-
-        sparkyPageContentArray.push({
-            id: "row_" + random_row_class,
-            class: "sparky_page_row sparky_row0",
-            style: {},
-            content: []
-        });
-
-        sparkyPageContentArray[0].content.push({
-            id: "",
-            class: "sparkle12 sparky_cell sparky_col0",
-            style: {},
-            cols: 12,
-            animation: [ "", 0, "" ],
-            content: []
-        });
-
-        sparkyPageContentArray[0].content[0].content.push({
+        sparkyPageContentArray = createDefaultPageContentArray({
             id: "",
             class: "sparky_custom_html",
             style: {},
@@ -118,7 +76,7 @@ if (sparkyEditorTextarea.value === "") {
     } else {
 
         // if this article is created with Sparky, populate content array from the article's HTML
-        var sparkyPageContentArray = populateSparkyPageContentArray(sparkyPageContentParsed.childNodes[0].childNodes[1].childNodes);
+        sparkyPageContentArray = populateSparkyPageContentArray(sparkyRows);
 
     }
 }
@@ -131,6 +89,54 @@ if (sparkyEditorTextarea.value === "") {
 
 
 //// III
+
+function normalizeBackgroundImagePaths(content, path) {
+    return content
+        .replaceAll('background-image: url(' + path + '"', 'background-image: url("')
+        .replaceAll("background-image: url(" + path + "'", "background-image: url('");
+}
+
+function createDefaultPageContentArray(initialBlock) {
+    let randomRowClass = Math.floor((Math.random() * 100000000));
+
+    return [
+        {
+            id: "row_" + randomRowClass,
+            class: SPARKY_DEFAULT_ROW_CLASS,
+            style: {},
+            content: [
+                {
+                    id: "",
+                    class: SPARKY_DEFAULT_COLUMN_CLASS,
+                    style: {},
+                    cols: 12,
+                    animation: [ ...SPARKY_DEFAULT_ANIMATION ],
+                    content: [ initialBlock ]
+                }
+            ]
+        }
+    ];
+}
+
+function getSparkyRowsFromParsedDocument(parsedDocument) {
+    return parsedDocument?.body?.childNodes ?? [];
+}
+
+function getFirstRowNode(rows) {
+    for (const row of rows) {
+        if (row?.nodeType === Node.ELEMENT_NODE) {
+            return row;
+        }
+    }
+    return null;
+}
+
+function isSparkyFirstRow(firstRow) {
+    if (!firstRow || !firstRow.id || !firstRow.className) {
+        return false;
+    }
+    return firstRow.className.includes("sparky_row0") && firstRow.className.includes("sparky_page_row");
+}
 
 
 // populate sparkyPageContentArray with HTML from textarea
