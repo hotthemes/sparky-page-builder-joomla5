@@ -665,7 +665,7 @@ function createEditableContentFromArray(arr) {
                     switch (block.type) {
 
                         case "paragraph":
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="add_paragraph_link" title="Add Link"></a><a class="delete_block" title="Delete Block"></a></div><p${blockId}${blockClass} ${blockStyle} contenteditable="true" draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${block.content}</p><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="add_paragraph_link" title="Add Link"></a><a class="add_paragraph_bold" title="Bold"></a><a class="add_paragraph_italic" title="Italic"></a><a class="add_paragraph_underline" title="Underline"></a><a class="delete_block" title="Delete Block"></a></div><p${blockId}${blockClass} ${blockStyle} contenteditable="true" draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${block.content}</p><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
                             break;
 
                         case "heading":
@@ -1619,6 +1619,41 @@ function sparkyEditorButtonsEvents() {
     });
 
 
+    function isValidInlineTextSelection(selection, targetBlock) {
+        if (!selection || !selection.baseNode || !targetBlock) {
+            return false;
+        }
+
+        if (selection.type !== "Range") {
+            return false;
+        }
+
+        if (!selection.toString().trim()) {
+            return false;
+        }
+
+        return targetBlock.contains(selection.baseNode) && targetBlock.contains(selection.extentNode);
+    }
+
+    function applyInlineTextCommand(buttonClassName, command) {
+        let commandButtons = document.getElementsByClassName(buttonClassName);
+
+        Array.from(commandButtons).forEach(function(button) {
+            button.addEventListener("click", function(event) {
+                let selection = window.getSelection();
+                let targetBlock = event.target.parentNode.nextSibling;
+
+                if (!isValidInlineTextSelection(selection, targetBlock)) {
+                    alert("Please select a part of the text first.");
+                    return;
+                }
+
+                document.execCommand(command, false, null);
+                targetBlock.dispatchEvent(new Event("input", { bubbles: true }));
+            });
+        });
+    }
+
     // add link to paragraph event
 
     let addParagraphLinkButtons = document.getElementsByClassName("add_paragraph_link");
@@ -1655,6 +1690,10 @@ function sparkyEditorButtonsEvents() {
         });
 
     });
+
+    applyInlineTextCommand("add_paragraph_bold", "bold");
+    applyInlineTextCommand("add_paragraph_italic", "italic");
+    applyInlineTextCommand("add_paragraph_underline", "underline");
 
     // copy block event
 
