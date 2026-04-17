@@ -174,7 +174,19 @@ a.add_paragraph_link::before {
     text-shadow: 1px 1px 0 #fff;
     content: "\f0c1";
 }
+a.add_heading_link::before {
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    text-shadow: 1px 1px 0 #fff;
+    content: "\f0c1";
+}
 a.add_paragraph_bold::before {
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    text-shadow: 1px 1px 0 #fff;
+    content: "\f032";
+}
+a.add_heading_bold::before {
     font-family: "Font Awesome 6 Free";
     font-weight: 900;
     text-shadow: 1px 1px 0 #fff;
@@ -186,11 +198,26 @@ a.add_paragraph_italic::before {
     text-shadow: 1px 1px 0 #fff;
     content: "\f033";
 }
+a.add_heading_italic::before {
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    text-shadow: 1px 1px 0 #fff;
+    content: "\f033";
+}
 a.add_paragraph_underline::before {
     font-family: "Font Awesome 6 Free";
     font-weight: 900;
     text-shadow: 1px 1px 0 #fff;
     content: "\f0cd";
+}
+a.add_heading_underline::before {
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    text-shadow: 1px 1px 0 #fff;
+    content: "\f0cd";
+}
+a.heading_link_disabled {
+    color: #ccc;
 }
 a.add_column::before {
     font-family: "Font Awesome 6 Free";

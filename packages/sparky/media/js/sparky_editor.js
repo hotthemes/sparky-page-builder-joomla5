@@ -102,6 +102,21 @@ function normalizeBoldTagsInHtml(content) {
         .replace(/<\/b>/gi, "</strong>");
 }
 
+function removeLinksFromHtml(content) {
+    const contentTemplate = document.createElement("template");
+    contentTemplate.innerHTML = content;
+
+    contentTemplate.content.querySelectorAll("a").forEach(function(linkElement) {
+        let linkContent = document.createDocumentFragment();
+        while (linkElement.firstChild) {
+            linkContent.appendChild(linkElement.firstChild);
+        }
+        linkElement.replaceWith(linkContent);
+    });
+
+    return contentTemplate.innerHTML;
+}
+
 function createDefaultPageContentArray(initialBlock) {
     return [
         {
@@ -257,6 +272,11 @@ function populateSparkyPageContentArray(sparkyRows) {
                         }
                     }
 
+                    let headingContent = normalizeBoldTagsInHtml(block.innerHTML);
+                    if (headingLink) {
+                        headingContent = removeLinksFromHtml(headingContent);
+                    }
+
                     sparkyPageContentArray[i].content[j].content.push({
                         id: block.id,
                         class: block.className,
@@ -265,7 +285,7 @@ function populateSparkyPageContentArray(sparkyRows) {
                         link: headingLink,
                         target: headingTarget,
                         level: block.nodeName,
-                        content: normalizeBoldTagsInHtml(block.innerHTML)
+                        content: headingContent
                     });
                     
                 }
@@ -675,7 +695,13 @@ function createEditableContentFromArray(arr) {
                             break;
 
                         case "heading":
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><${block.level}${blockId}${blockClass}${blockStyle} contenteditable="true" draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">`;
+                            let headingLinkButtonClass = "add_heading_link";
+                            let headingLinkButtonTitle = "Add Link";
+                            if (block.link) {
+                                headingLinkButtonClass += " heading_link_disabled";
+                                headingLinkButtonTitle = "Link disabled because Heading Settings has a link";
+                            }
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="${headingLinkButtonClass}" title="${headingLinkButtonTitle}"></a><a class="add_heading_bold" title="Bold"></a><a class="add_heading_italic" title="Italic"></a><a class="add_heading_underline" title="Underline"></a><a class="delete_block" title="Delete Block"></a></div><${block.level}${blockId}${blockClass}${blockStyle} contenteditable="true" draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">`;
                             if ( block.link && ! block.content.includes("href=") ) {
                                 sparkyHTML += `<a href="${block.link}"${blockTarget}>`
                             }
@@ -1660,6 +1686,10 @@ function sparkyEditorButtonsEvents() {
         });
     }
 
+    function isHeadingTag(nodeName) {
+        return [ "H1", "H2", "H3", "H4", "H5", "H6" ].includes(nodeName);
+    }
+
     // add link to paragraph event
 
     let addParagraphLinkButtons = document.getElementsByClassName("add_paragraph_link");
@@ -1697,9 +1727,49 @@ function sparkyEditorButtonsEvents() {
 
     });
 
+    // add link to heading event
+    let addHeadingLinkButtons = document.getElementsByClassName("add_heading_link");
+    Array.from(addHeadingLinkButtons).forEach(function(button) {
+
+        button.addEventListener("click", function(event) {
+            if (event.target.className.includes("heading_link_disabled")) {
+                alert("Link icon is disabled while the Heading Settings link is in use.");
+                return;
+            }
+
+            if ( window.getSelection().baseNode ) {
+                // check if selection is inside existing link and existing link is in heading
+                if ( window.getSelection().baseNode.parentNode.nodeName === "A" ) {
+                    if (isHeadingTag(window.getSelection().baseNode.parentNode.parentNode.nodeName)) {
+                        sparky_modal( "add_link_modal" );
+                    }
+                } else {
+                    // open modal if some text is selected
+                    if ( window.getSelection().type === "Range" ) {
+                        if (
+                            window.getSelection().baseNode.parentNode === event.target.parentNode.nextSibling
+                            ||
+                            window.getSelection().baseNode.parentNode.parentNode === event.target.parentNode.nextSibling
+                        ) {
+                            sparky_modal( "add_link_modal" );
+                        }
+                    } else {
+                        alert("Please select two or more characters of text where you want to add a link.")
+                    }
+                }
+            } else {
+                alert("Please select a part of the text first.")
+            }
+        });
+
+    });
+
     applyInlineTextCommand("add_paragraph_bold", "bold");
     applyInlineTextCommand("add_paragraph_italic", "italic");
     applyInlineTextCommand("add_paragraph_underline", "underline");
+    applyInlineTextCommand("add_heading_bold", "bold");
+    applyInlineTextCommand("add_heading_italic", "italic");
+    applyInlineTextCommand("add_heading_underline", "underline");
 
     // copy block event
 
@@ -3430,6 +3500,9 @@ function sparky_modal(modal_type) {
 
             // heading link
             block.link = document.getElementById("heading_link").value;
+            if (block.link) {
+                block.content = removeLinksFromHtml(block.content);
+            }
 
             // heading link target
             if ( document.getElementById("heading_target").value === "blank" ) {
