@@ -97,11 +97,9 @@ function normalizeBackgroundImagePaths(content, path) {
 }
 
 function createDefaultPageContentArray(initialBlock) {
-    let randomRowClass = Math.floor((Math.random() * 100000000));
-
     return [
         {
-            id: "row_" + randomRowClass,
+            id: generateRandomRowId(),
             class: SPARKY_DEFAULT_ROW_CLASS,
             style: {},
             content: [
@@ -116,6 +114,10 @@ function createDefaultPageContentArray(initialBlock) {
             ]
         }
     ];
+}
+
+function generateRandomRowId() {
+    return "row_" + Math.floor((Math.random() * 100000000));
 }
 
 function getSparkyRowsFromParsedDocument(parsedDocument) {
@@ -172,7 +174,7 @@ function populateSparkyPageContentArray(sparkyRows) {
         }
 
         sparkyPageContentArray.push({
-            id: row.id,
+            id: row.id || generateRandomRowId(),
             class: row.className,
             style: row.style,
             content: []
@@ -1276,11 +1278,9 @@ function sparkyEditorButtonsEvents() {
 
     document.getElementById("add_page_break").addEventListener("click", function() {
 
-        let random_row_class = Math.floor((Math.random() * 100000000));
-
         // add page break tag as the last element to the array
         sparkyPageContentArray.push({
-            id: "row_" + random_row_class,
+            id: generateRandomRowId(),
             class: "system-pagebreak",
             title: "Page Break Title",
             alias: "Table of Contents Alias",
@@ -1331,9 +1331,8 @@ function sparkyEditorButtonsEvents() {
             // row must be copied this way, otherwise it will be just a "reference"
             let newRow = JSON.parse(JSON.stringify(copiedRow));
 
-            // generate random class
-            let random_row_class = Math.floor((Math.random() * 100000000));
-            newRow.id = "row_" + random_row_class;
+            // generate random row id
+            newRow.id = generateRandomRowId();
 
             // add copied row to array
             sparkyPageContentArray.splice(sparkyRowPosition, 0, newRow);
@@ -2517,9 +2516,6 @@ function sparky_modal(modal_type) {
 
         modal.style.display = "block";
 
-        // generate random classes
-        let random_row_class = Math.floor((Math.random() * 100000000));
-
         // new row position (.sparky_rowX)
         let new_row_position = sparkyPageContentArray.length;
 
@@ -2534,7 +2530,7 @@ function sparky_modal(modal_type) {
 
                 // add row to the sparky object
                 sparkyPageContentArray.push({
-                    id: "row_" + random_row_class,
+                    id: generateRandomRowId(),
                     class: "sparky_page_row sparky_row" + new_row_position,
                     style: {},
                     content: []
@@ -2701,7 +2697,8 @@ function sparky_modal(modal_type) {
             event.preventDefault();
 
             // row id
-            sparkyPageContentArray[sparkyRowPosition].id = document.getElementById("row_id").value;
+            let rowIdInput = document.getElementById("row_id").value.trim();
+            sparkyPageContentArray[sparkyRowPosition].id = rowIdInput || generateRandomRowId();
 
             // row class ("sparky_rowX" must be last)
             sparkyPageContentArray[sparkyRowPosition].class = document.getElementById("row_class").value + " sparky_page_row sparky_row" + sparkyRowPosition;
