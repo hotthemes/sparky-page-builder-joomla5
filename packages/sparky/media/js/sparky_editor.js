@@ -102,10 +102,6 @@ function normalizeBoldTagsInHtml(content) {
         .replace(/<\/b>/gi, "</strong>");
 }
 
-function normalizeBoldTagsInElement(element) {
-    element.innerHTML = normalizeBoldTagsInHtml(element.innerHTML);
-}
-
 function createDefaultPageContentArray(initialBlock) {
     return [
         {
@@ -1221,7 +1217,7 @@ sparkyPageContentEditable.addEventListener('input', function(event) {
     if (event.target.nodeName === "TEXTAREA") {
         sparkyPageContentArray[row].content[column].content[block].content = event.target.value;
     } else {
-        sparkyPageContentArray[row].content[column].content[block].content = event.target.innerHTML;
+        sparkyPageContentArray[row].content[column].content[block].content = normalizeBoldTagsInHtml(event.target.innerHTML);
     }
     
     // Update HTML in the textarea (can't use refreshSparky(), it blocks typing)
@@ -1659,9 +1655,6 @@ function sparkyEditorButtonsEvents() {
                 }
 
                 document.execCommand(command, false, null);
-                if (command === "bold") {
-                    normalizeBoldTagsInElement(targetBlock);
-                }
                 targetBlock.dispatchEvent(new Event("input", { bubbles: true }));
             });
         });
