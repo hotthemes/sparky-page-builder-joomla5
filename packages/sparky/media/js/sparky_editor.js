@@ -1670,11 +1670,14 @@ function sparkyEditorButtonsEvents() {
 
 
     function isValidInlineTextSelection(selection, targetBlock) {
-        if (!selection || !selection.baseNode || !targetBlock) {
+        const anchorNode = selection ? (selection.anchorNode || selection.baseNode) : null;
+        const focusNode = selection ? (selection.focusNode || selection.extentNode) : null;
+
+        if (!selection || !anchorNode || !focusNode || !targetBlock) {
             return false;
         }
 
-        if (selection.type !== "Range") {
+        if (selection.type !== "Range" || selection.rangeCount === 0) {
             return false;
         }
 
@@ -1682,7 +1685,7 @@ function sparkyEditorButtonsEvents() {
             return false;
         }
 
-        return targetBlock.contains(selection.baseNode) && targetBlock.contains(selection.extentNode);
+        return targetBlock.contains(anchorNode) && targetBlock.contains(focusNode);
     }
 
     function applyInlineTextCommand(buttonClassName, command) {
@@ -1714,22 +1717,24 @@ function sparkyEditorButtonsEvents() {
     Array.from(addParagraphLinkButtons).forEach(function(button) {
 
         button.addEventListener("click", function(event) {
+            const selection = window.getSelection();
+            const anchorNode = selection ? (selection.anchorNode || selection.baseNode) : null;
 
-            if ( window.getSelection().baseNode ) {
+            if (anchorNode) {
                 // check if selection is inside existing link, and existing link is in paragraph or list item
-                if ( window.getSelection().baseNode.parentNode.nodeName === "A" ) {
-                    if (window.getSelection().baseNode.parentNode.parentNode.nodeName === "P" || window.getSelection().baseNode.parentNode.parentNode.nodeName === "LI") {
+                if ( anchorNode.parentNode.nodeName === "A" ) {
+                    if (anchorNode.parentNode.parentNode.nodeName === "P" || anchorNode.parentNode.parentNode.nodeName === "LI") {
                         sparky_modal( "add_link_modal" );
                     }
                 } else {
                     // open modal if some text is selected
-                    if ( window.getSelection().type === "Range" ) {
+                    if ( selection.type === "Range" && selection.rangeCount > 0 ) {
                         // check if selected text is inside this paragraph (first case)
                         // or inside list item (second case)
                         if (
-                            window.getSelection().baseNode.parentNode === event.target.parentNode.nextSibling
+                            anchorNode.parentNode === event.target.parentNode.nextSibling
                             ||
-                            window.getSelection().baseNode.parentNode.parentNode === event.target.parentNode.nextSibling
+                            anchorNode.parentNode.parentNode === event.target.parentNode.nextSibling
                         ) {
                             sparky_modal( "add_link_modal" );
                         }
@@ -1750,24 +1755,27 @@ function sparkyEditorButtonsEvents() {
     Array.from(addHeadingLinkButtons).forEach(function(button) {
 
         button.addEventListener("click", function(event) {
+            const selection = window.getSelection();
+            const anchorNode = selection ? (selection.anchorNode || selection.baseNode) : null;
+
             if (event.target.className.includes("heading_link_disabled")) {
                 alert("Link icon is disabled while the Heading Settings link is in use.");
                 return;
             }
 
-            if ( window.getSelection().baseNode ) {
+            if (anchorNode) {
                 // check if selection is inside existing link and existing link is in heading
-                if ( window.getSelection().baseNode.parentNode.nodeName === "A" ) {
-                    if (isHeadingTag(window.getSelection().baseNode.parentNode.parentNode.nodeName)) {
+                if ( anchorNode.parentNode.nodeName === "A" ) {
+                    if (isHeadingTag(anchorNode.parentNode.parentNode.nodeName)) {
                         sparky_modal( "add_link_modal" );
                     }
                 } else {
                     // open modal if some text is selected
-                    if ( window.getSelection().type === "Range" ) {
+                    if ( selection.type === "Range" && selection.rangeCount > 0 ) {
                         if (
-                            window.getSelection().baseNode.parentNode === event.target.parentNode.nextSibling
+                            anchorNode.parentNode === event.target.parentNode.nextSibling
                             ||
-                            window.getSelection().baseNode.parentNode.parentNode === event.target.parentNode.nextSibling
+                            anchorNode.parentNode.parentNode === event.target.parentNode.nextSibling
                         ) {
                             sparky_modal( "add_link_modal" );
                         }
@@ -4730,13 +4738,15 @@ function sparky_modal(modal_type) {
     if (modal_type === "add_link_modal") {
 
         let currentLink = false;
+        const selection = window.getSelection();
+        const anchorNode = selection ? (selection.anchorNode || selection.baseNode) : null;
 
         // if selected text is inside link
-        if ( window.getSelection().baseNode.parentNode.nodeName === "A" ) {
+        if (anchorNode && anchorNode.parentNode.nodeName === "A") {
 
             modal.style.display = "block";
 
-            currentLink = window.getSelection().baseNode.parentNode;
+            currentLink = anchorNode.parentNode;
 
             // assign current link value to the modal input
             document.getElementById("add_link_link").value = currentLink.getAttribute("href");
@@ -4752,7 +4762,7 @@ function sparky_modal(modal_type) {
         } else {
 
             var linkURL = prompt('Enter a URL:', 'https://');
-            var selectedText = window.getSelection();
+            var selectedText = selection;
 
             document.execCommand('insertHTML', false, '<a href="' + linkURL + '">' + selectedText + '</a>');
 
