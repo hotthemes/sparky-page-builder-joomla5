@@ -117,6 +117,24 @@ function removeLinksFromHtml(content) {
     return contentTemplate.innerHTML;
 }
 
+function isFullHeadingLink(blockElement) {
+    if (!blockElement || blockElement.children.length !== 1) {
+        return false;
+    }
+
+    const firstElement = blockElement.children[0];
+    if (!firstElement || firstElement.nodeName !== "A") {
+        return false;
+    }
+
+    return Array.from(blockElement.childNodes).every(function(node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            return !node.textContent.trim();
+        }
+        return node === firstElement;
+    });
+}
+
 function createDefaultPageContentArray(initialBlock) {
     return [
         {
@@ -265,15 +283,14 @@ function populateSparkyPageContentArray(sparkyRows) {
                     // you can't access it just with block.link
                     let headingLink = "";
                     let headingTarget = false;
-                    if (block.children[0]) {
-                        if (block.children[0].nodeName === "A") {
-                            headingLink = block.children[0].getAttribute("href");
-                            headingTarget = block.children[0].getAttribute("target");
-                        }
+                    let headingHasFullLink = isFullHeadingLink(block);
+                    if (headingHasFullLink) {
+                        headingLink = block.children[0].getAttribute("href");
+                        headingTarget = block.children[0].getAttribute("target");
                     }
 
                     let headingContent = normalizeBoldTagsInHtml(block.innerHTML);
-                    if (headingLink) {
+                    if (headingHasFullLink) {
                         headingContent = removeLinksFromHtml(headingContent);
                     }
 
