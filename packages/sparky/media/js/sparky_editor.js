@@ -686,7 +686,7 @@ function createEditableContentFromArray(arr) {
                     let blockAlt = "";                        
                     let blockTarget = "";                   
                     let blockSrc = "";
-                    let blockUp = '<a class="block_up" title="Move Up">';
+                    let blockUp = '<a class="block_up" title="Move Up"></a>';
                     let blockDown = '<a class="block_down" title="Move Down"></a>';
 
                     if (block.id) blockId = ` id="${block.id}"`;
@@ -916,7 +916,7 @@ function createEditableContentFromArray(arr) {
                             if (block.network6)
                                 social_network_html += `<a class="sparky_social_icon6" href="${block.link6}"${blockTarget} ><i class="fab fa-${block.network6}" aria-hidden="true"></i></a>`;
 
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><div${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${social_network_html}</div><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><div${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${social_network_html}</div><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
                             break;
 
                         case "customhtml":
