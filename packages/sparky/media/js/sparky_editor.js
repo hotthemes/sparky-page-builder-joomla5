@@ -12,6 +12,7 @@ const SPARKY_DEFAULT_ROW_CLASS = "sparky_page_row sparky_row0";
 const SPARKY_DEFAULT_COLUMN_CLASS = "sparkle12 sparky_cell sparky_col0";
 const SPARKY_DEFAULT_ANIMATION = [ "", 0, "" ];
 let pendingBlockControlScroll = null;
+let pendingParagraphFocus = null;
 
 // get page url (not used anywhere... yet)
 let sparkyPageUrl = window.location.href.split("/administrator/index.php");
@@ -1239,6 +1240,60 @@ function sparkyEditorDraggableEditableEvents(){
 sparkyEditorDraggableEditableEvents();
 
 
+function rangeToHtml(contentRange) {
+    let contentContainer = document.createElement("div");
+    contentContainer.appendChild(contentRange.cloneContents());
+    return contentContainer.innerHTML;
+}
+
+function splitParagraphAtSelection(paragraphElement, selectionRange) {
+    let contentBeforeRange = document.createRange();
+    contentBeforeRange.selectNodeContents(paragraphElement);
+    contentBeforeRange.setEnd(selectionRange.startContainer, selectionRange.startOffset);
+
+    let contentAfterRange = document.createRange();
+    contentAfterRange.selectNodeContents(paragraphElement);
+    contentAfterRange.setStart(selectionRange.endContainer, selectionRange.endOffset);
+
+    return {
+        before: normalizeBoldTagsInHtml(rangeToHtml(contentBeforeRange)),
+        after: normalizeBoldTagsInHtml(rangeToHtml(contentAfterRange))
+    };
+}
+
+function queueParagraphFocus(rowPosition, columnPosition, blockPosition) {
+    pendingParagraphFocus = {
+        row: Number(rowPosition),
+        column: Number(columnPosition),
+        block: Number(blockPosition)
+    };
+}
+
+function applyPendingParagraphFocus() {
+    if (!pendingParagraphFocus) {
+        return;
+    }
+
+    const selector = ".sparky_row" + pendingParagraphFocus.row + " .sparky_col" + pendingParagraphFocus.column + " .sparky_block" + pendingParagraphFocus.block;
+    const blockSettings = sparkyPageContentEditable.querySelector(selector);
+    const paragraphElement = blockSettings ? blockSettings.nextSibling : null;
+
+    if (paragraphElement && paragraphElement.nodeName === "P") {
+        paragraphElement.focus();
+
+        let caretRange = document.createRange();
+        caretRange.selectNodeContents(paragraphElement);
+        caretRange.collapse(true);
+
+        let selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(caretRange);
+    }
+
+    pendingParagraphFocus = null;
+}
+
+
 // edit text in paragraph or heading
 
 sparkyPageContentEditable.addEventListener('input', function(event) {
@@ -1270,6 +1325,47 @@ sparkyPageContentEditable.addEventListener('input', function(event) {
     // editable content changed - refresh events!
     //sparkyEditorButtonsEvents();
 
+});
+
+sparkyPageContentEditable.addEventListener('keydown', function(event) {
+    if (event.key !== "Enter" || event.shiftKey || event.target.nodeName !== "P") {
+        return;
+    }
+
+    let selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+        return;
+    }
+
+    let selectionRange = selection.getRangeAt(0);
+    if (!event.target.contains(selectionRange.startContainer) || !event.target.contains(selectionRange.endContainer)) {
+        return;
+    }
+
+    event.preventDefault();
+
+    // Find block position in array
+    let row = event.target.parentNode.parentNode.parentNode.className;
+    row = row.split("sparky_row")[row.split("sparky_row").length-1];
+
+    let column = event.target.parentNode.className;
+    column = column.split("sparky_col")[column.split("sparky_col").length-1];
+
+    let block = event.target.previousSibling.className;
+    block = block.split("sparky_block")[block.split("sparky_block").length-1];
+
+    let splitParagraphContent = splitParagraphAtSelection(event.target, selectionRange);
+    let currentParagraphBlock = sparkyPageContentArray[row].content[column].content[block];
+    let newParagraphBlock = JSON.parse(JSON.stringify(currentParagraphBlock));
+    newParagraphBlock.id = "";
+
+    currentParagraphBlock.content = splitParagraphContent.before;
+    newParagraphBlock.content = splitParagraphContent.after;
+
+    sparkyPageContentArray[row].content[column].content.splice(Number(block) + 1, 0, newParagraphBlock);
+
+    queueParagraphFocus(row, column, Number(block) + 1);
+    refreshSparky();
 });
 
 // on paste, convert clipboard content to text (except for custom HTML)
@@ -2228,6 +2324,7 @@ function refreshSparky() {
     // refresh draggable elements (fix for firefox bug)
     sparkyEditorDraggableEditableEvents();
 
+    applyPendingParagraphFocus();
     applyPendingBlockControlScroll();
 
     console.log(sparkyPageContentArray)
