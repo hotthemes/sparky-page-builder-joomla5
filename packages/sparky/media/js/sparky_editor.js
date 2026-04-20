@@ -713,7 +713,7 @@ function createEditableContentFromArray(arr) {
                     switch (block.type) {
 
                         case "paragraph":
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="add_paragraph_link" title="Add Link"></a><a class="add_paragraph_bold" title="Bold"></a><a class="add_paragraph_italic" title="Italic"></a><a class="add_paragraph_underline" title="Underline"></a><a class="delete_block" title="Delete Block"></a></div><p${blockId}${blockClass} ${blockStyle} contenteditable="true" draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${block.content}</p><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="add_paragraph_link" title="Add Link"></a><a class="add_paragraph_bold" title="Bold"></a><a class="add_paragraph_italic" title="Italic"></a><a class="add_paragraph_underline" title="Underline"></a><a class="delete_block" title="Delete Block"></a></div><p${blockId}${blockClass} ${blockStyle} contenteditable="true" draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${block.content}</p><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
                             break;
 
                         case "heading":
@@ -723,7 +723,7 @@ function createEditableContentFromArray(arr) {
                                 headingLinkButtonClass += " heading_link_disabled";
                                 headingLinkButtonTitle = "Link disabled because Heading Settings has a link";
                             }
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="${headingLinkButtonClass}" title="${headingLinkButtonTitle}"></a><a class="add_heading_bold" title="Bold"></a><a class="add_heading_italic" title="Italic"></a><a class="add_heading_underline" title="Underline"></a><a class="delete_block" title="Delete Block"></a></div><${block.level}${blockId}${blockClass}${blockStyle} contenteditable="true" draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="${headingLinkButtonClass}" title="${headingLinkButtonTitle}"></a><a class="add_heading_bold" title="Bold"></a><a class="add_heading_italic" title="Italic"></a><a class="add_heading_underline" title="Underline"></a><a class="delete_block" title="Delete Block"></a></div><${block.level}${blockId}${blockClass}${blockStyle} contenteditable="true" draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">`;
                             if ( block.link && ! block.content.includes("href=") ) {
                                 sparkyHTML += `<a href="${block.link}"${blockTarget}>`
                             }
@@ -735,7 +735,7 @@ function createEditableContentFromArray(arr) {
                             break;
 
                         case "image":
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><figure draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><figure draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">`;
                             if ( block.link ) {
                                 sparkyHTML += `<a href="${block.link}"${blockTarget}>`
                             }
@@ -747,26 +747,26 @@ function createEditableContentFromArray(arr) {
                             break;
 
                         case "separator":
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><hr${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);"/><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><hr${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);"/><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
                             break;
 
                         case "spacer":
                             if (!blockStyle) {
                                 blockStyle = " style='height:50px'";
                             }
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><div${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);"></div><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><div${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);"></div><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
                             break;
 
                         case "button":
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><a href="${block.link}" ${blockTarget} ${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${block.content}</a><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><a href="${block.link}" ${blockTarget} ${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${block.content}</a><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
                             break;
 
                         case "list":
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="add_paragraph_link" title="Add Link"></a><a class="add_paragraph_bold" title="Bold"></a><a class="add_paragraph_italic" title="Italic"></a><a class="add_paragraph_underline" title="Underline"></a><a class="delete_block" title="Delete Block"></a></div><${block.listType}${blockId}${blockClass} ${blockStyle} contenteditable="true" draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${block.content}</${block.listType}><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="add_paragraph_link" title="Add Link"></a><a class="add_paragraph_bold" title="Bold"></a><a class="add_paragraph_italic" title="Italic"></a><a class="add_paragraph_underline" title="Underline"></a><a class="delete_block" title="Delete Block"></a></div><${block.listType}${blockId}${blockClass} ${blockStyle} contenteditable="true" draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${block.content}</${block.listType}><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
                             break;
 
                         case "iframe":
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><iframe${blockId}${blockClass} ${blockStyle} src="${block.src}" draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);"></iframe><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><iframe${blockId}${blockClass} ${blockStyle} src="${block.src}" draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);"></iframe><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
                             break;
 
                         case "video":
@@ -826,7 +826,7 @@ function createEditableContentFromArray(arr) {
                             if (block.muted) {
                                 videoMuted = " muted";
                             }
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><video${blockId}${blockClass} ${blockStyle} ${videoPoster}${videoAutoplay}${videoControls}${videoLoop}${videoMuted} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${videoMp4}${videoOgg}${videoWebm}Your browser does not support the video element.</video><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><video${blockId}${blockClass} ${blockStyle} ${videoPoster}${videoAutoplay}${videoControls}${videoLoop}${videoMuted} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${videoMp4}${videoOgg}${videoWebm}Your browser does not support the video element.</video><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
                             break;
 
                         case "audio":
@@ -881,7 +881,7 @@ function createEditableContentFromArray(arr) {
                             if (block.muted) {
                                 audioMuted = " muted";
                             }
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><audio${blockId}${blockClass} ${blockStyle} ${audioAutoplay}${audioControls}${audioLoop}${audioMuted} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${audioMp3}${audioOgg}${audioWav}Your browser does not support the audio element.</audio>${audioMessage}<div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><audio${blockId}${blockClass} ${blockStyle} ${audioAutoplay}${audioControls}${audioLoop}${audioMuted} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${audioMp3}${audioOgg}${audioWav}Your browser does not support the audio element.</audio>${audioMessage}<div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
                             break;
 
                         case "icon":
@@ -897,7 +897,7 @@ function createEditableContentFromArray(arr) {
                             } else {
                                 blockDragndropIcon = 'draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);"';
                             }
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div>${blockLinkStart}<i${blockId}${blockClass} ${blockStyle} aria-hidden="true" ${blockDragndropIcon}></i>${blockLinkEnd}<div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div>${blockLinkStart}<i${blockId}${blockClass} ${blockStyle} aria-hidden="true" ${blockDragndropIcon}></i>${blockLinkEnd}<div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
                             break;
 
                         case "social":
@@ -920,11 +920,11 @@ function createEditableContentFromArray(arr) {
                             break;
 
                         case "customhtml":
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><textarea${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${block.content}</textarea><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><textarea${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${block.content}</textarea><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
                             break;
 
                         case "joomlamodule":
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><div${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${block.content}</div><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><div${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${block.content}</div><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
                             break;
 
                         default:
@@ -1718,6 +1718,15 @@ function sparkyEditorButtonsEvents() {
 
     let addBlockEditorButtons = document.getElementsByClassName("add_block");
     Array.from(addBlockEditorButtons).forEach(function(button) {
+
+        button.addEventListener("click", function(event) {
+            sparky_modal( "add_block_modal" );
+        });
+
+    });
+
+    let addBlockAfterBlockButtons = document.getElementsByClassName("add_block_after_block");
+    Array.from(addBlockAfterBlockButtons).forEach(function(button) {
 
         button.addEventListener("click", function(event) {
             sparky_modal( "add_block_modal" );
@@ -3326,27 +3335,33 @@ function sparky_modal(modal_type) {
         // event.composedPath()[4].className -> row position (.sparky_rowX)
         // event.composedPath()[2].className -> col position (.sparky_colX)
         let sparkyBlockPosition = determineBlockPosition([event.composedPath()[4].className, event.composedPath()[2].className], false);
+        let insertPosition = sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.length;
+
+        if (event.target.className.includes("add_block_after_block")) {
+            let clickedBlockPosition = determineBlockPosition([event.composedPath()[4].className, event.composedPath()[2].className, event.composedPath()[1].className]);
+            insertPosition = Number(clickedBlockPosition[2]) + 1;
+        }
+
+        function addNewBlockToColumn(newBlock) {
+            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.splice(insertPosition, 0, newBlock);
+            modal.style.display = "none";
+            refreshSparky();
+        }
 
         // add paragraph block
         document.getElementById("sparky_block_paragraph").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "",
                 style: {},
                 type: "paragraph",
                 content: "Add some text..."
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add heading block
         document.getElementById("sparky_block_heading").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "",
                 style: {},
@@ -3356,16 +3371,11 @@ function sparky_modal(modal_type) {
                 target: false,
                 content: "Sample Heading"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add image block
         document.getElementById("sparky_block_image").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "",
                 style: {},
@@ -3375,48 +3385,33 @@ function sparky_modal(modal_type) {
                 src: "media/plg_editors_sparky/images/image.png",
                 alt: ""
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add separator block
         document.getElementById("sparky_block_separator").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "",
                 style: {height: "3px"},
                 link: "",
                 type: "separator"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add spacer block
         document.getElementById("sparky_block_spacer").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "sparky_spacer",
                 style: {},
                 link: "",
                 type: "spacer"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add button block
         document.getElementById("sparky_block_button").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "sparky_button",
                 style: {},
@@ -3425,16 +3420,11 @@ function sparky_modal(modal_type) {
                 type: "button",
                 content: "My Button"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add list block
         document.getElementById("sparky_block_list").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "",
                 style: {},
@@ -3442,32 +3432,22 @@ function sparky_modal(modal_type) {
                 listType: "ul",
                 content: "<li>Lorem ipsum</li><li>Dolor sit amet</li><li>Consectetuer adipiscing</li>"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add Iframe block
         document.getElementById("sparky_block_iframe").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "",
                 style: {},
                 src: "",
                 type: "iframe"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add video block
         document.getElementById("sparky_block_video").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "",
                 style: {},
@@ -3481,16 +3461,11 @@ function sparky_modal(modal_type) {
                 muted: false,
                 type: "video"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add audio block
         document.getElementById("sparky_block_audio").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "",
                 style: {},
@@ -3503,16 +3478,11 @@ function sparky_modal(modal_type) {
                 muted: false,
                 type: "audio"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add icon block
         document.getElementById("sparky_block_icon").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "fa-check-circle",
                 category: "fas",
@@ -3521,16 +3491,11 @@ function sparky_modal(modal_type) {
                 style: {},
                 type: "icon"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add social block
         document.getElementById("sparky_block_social").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "sparky_social_icons",
                 style: {},
@@ -3549,42 +3514,28 @@ function sparky_modal(modal_type) {
                 link6: "",
                 type: "social"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add custom html block
         document.getElementById("sparky_block_customhtml").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "sparky_custom_html",
                 style: {},
                 content: "",
                 type: "customhtml"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add joomla module block
         document.getElementById("sparky_block_joomlamodule").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "sparky_joomla_module_id0",
                 class: "sparky_joomla_module",
                 style: {},
                 content: "{loadmoduleid 0}",
                 type: "joomlamodule"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
     }

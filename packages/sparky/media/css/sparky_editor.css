@@ -260,7 +260,7 @@ a.column_right::before {
     text-shadow: 1px 1px 0 #fff;
     content: "\f0da";
 }
-a.add_block::before {
+a.add_block::before, a.add_block_after_block::before {
     font-family: "Font Awesome 6 Free";
     font-weight: 900;
     text-shadow: 1px 1px 0 #fff;
