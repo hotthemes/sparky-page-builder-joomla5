@@ -11,6 +11,7 @@ var sparkyPageContentArray;
 const SPARKY_DEFAULT_ROW_CLASS = "sparky_page_row sparky_row0";
 const SPARKY_DEFAULT_COLUMN_CLASS = "sparkle12 sparky_cell sparky_col0";
 const SPARKY_DEFAULT_ANIMATION = [ "", 0, "" ];
+let pendingBlockControlScroll = null;
 
 // get page url (not used anywhere... yet)
 let sparkyPageUrl = window.location.href.split("/administrator/index.php");
@@ -1828,6 +1829,7 @@ function sparkyEditorButtonsEvents() {
             let sparkyBlockPosition = determineBlockPosition([event.composedPath()[4].className, event.composedPath()[2].className, event.composedPath()[1].className] );
 
             if ( Number(sparkyBlockPosition[2]) > 0 ) {
+                queueBlockControlScroll(sparkyBlockPosition[0], sparkyBlockPosition[1], Number(sparkyBlockPosition[2]) - 1, "block_up", event.clientY);
                 moveArrayItemToNewIndex(sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content, Number(sparkyBlockPosition[2]), Number(sparkyBlockPosition[2]) - 1);
                 refreshSparky();
             }
@@ -1849,6 +1851,7 @@ function sparkyEditorButtonsEvents() {
             let sparkyBlockPosition = determineBlockPosition([event.composedPath()[4].className, event.composedPath()[2].className, event.composedPath()[1].className] );
 
             if ( sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.length - 1 > Number(sparkyBlockPosition[2]) ) {
+                queueBlockControlScroll(sparkyBlockPosition[0], sparkyBlockPosition[1], Number(sparkyBlockPosition[2]) + 1, "block_down", event.clientY);
                 moveArrayItemToNewIndex(sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content, Number(sparkyBlockPosition[2]), Number(sparkyBlockPosition[2]) + 1);
                 refreshSparky();
             }
@@ -2177,6 +2180,32 @@ function onBlockDrop(event) {
 
 //// VIII functions
 
+function queueBlockControlScroll(rowPosition, columnPosition, blockPosition, controlClassName, clientY) {
+    pendingBlockControlScroll = {
+        row: Number(rowPosition),
+        column: Number(columnPosition),
+        block: Number(blockPosition),
+        controlClassName: controlClassName,
+        clientY: clientY
+    };
+}
+
+function applyPendingBlockControlScroll() {
+    if (!pendingBlockControlScroll) {
+        return;
+    }
+
+    const selector = ".sparky_row" + pendingBlockControlScroll.row + " .sparky_col" + pendingBlockControlScroll.column + " .sparky_block" + pendingBlockControlScroll.block + " ." + pendingBlockControlScroll.controlClassName;
+    const blockControlButton = sparkyPageContentEditable.querySelector(selector);
+
+    if (blockControlButton) {
+        const buttonPosition = blockControlButton.getBoundingClientRect();
+        window.scrollBy(0, buttonPosition.top - pendingBlockControlScroll.clientY);
+    }
+
+    pendingBlockControlScroll = null;
+}
+
 
 
 function refreshSparky() {
@@ -2190,6 +2219,8 @@ function refreshSparky() {
 
     // refresh draggable elements (fix for firefox bug)
     sparkyEditorDraggableEditableEvents();
+
+    applyPendingBlockControlScroll();
 
     console.log(sparkyPageContentArray)
 
