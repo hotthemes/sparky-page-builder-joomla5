@@ -13,6 +13,9 @@ const SPARKY_DEFAULT_COLUMN_CLASS = "sparkle12 sparky_cell sparky_col0";
 const SPARKY_DEFAULT_ANIMATION = [ "", 0, "" ];
 let pendingBlockControlScroll = null;
 let pendingParagraphFocus = null;
+let sparkyHistory = [];
+let sparkyHistoryIndex = -1;
+let isApplyingHistoryState = false;
 
 // get page url (not used anywhere... yet)
 let sparkyPageUrl = window.location.href.split("/administrator/index.php");
@@ -1991,6 +1994,8 @@ function sparkyEditorButtonsEvents() {
 
 }
 sparkyEditorButtonsEvents();
+initSparkyUndoRedoToolbarButtons();
+recordSparkyHistoryState();
 
 
 
@@ -2284,6 +2289,93 @@ function onBlockDrop(event) {
 
 //// VIII functions
 
+function sparkySerializeState() {
+    return JSON.stringify(sparkyPageContentArray);
+}
+
+function updateSparkyHistoryButtons() {
+    const undoButton = document.getElementById("sparkyUndoButton");
+    const redoButton = document.getElementById("sparkyRedoButton");
+
+    if (undoButton) {
+        undoButton.disabled = sparkyHistoryIndex <= 0;
+    }
+    if (redoButton) {
+        redoButton.disabled = sparkyHistoryIndex >= sparkyHistory.length - 1;
+    }
+}
+
+function recordSparkyHistoryState() {
+    if (isApplyingHistoryState) {
+        return;
+    }
+
+    const currentState = sparkySerializeState();
+    if (sparkyHistoryIndex >= 0 && sparkyHistory[sparkyHistoryIndex] === currentState) {
+        updateSparkyHistoryButtons();
+        return;
+    }
+
+    sparkyHistory = sparkyHistory.slice(0, sparkyHistoryIndex + 1);
+    sparkyHistory.push(currentState);
+    sparkyHistoryIndex = sparkyHistory.length - 1;
+    updateSparkyHistoryButtons();
+}
+
+function applySparkyHistoryState() {
+    isApplyingHistoryState = true;
+    sparkyPageContentArray = JSON.parse(sparkyHistory[sparkyHistoryIndex]);
+    refreshSparky();
+    isApplyingHistoryState = false;
+    updateSparkyHistoryButtons();
+}
+
+function sparkyUndoAction() {
+    if (sparkyHistoryIndex <= 0) {
+        return;
+    }
+    sparkyHistoryIndex--;
+    applySparkyHistoryState();
+}
+
+function sparkyRedoAction() {
+    if (sparkyHistoryIndex >= sparkyHistory.length - 1) {
+        return;
+    }
+    sparkyHistoryIndex++;
+    applySparkyHistoryState();
+}
+
+function initSparkyUndoRedoToolbarButtons() {
+    const toolbar = document.getElementById("toolbar");
+    if (!toolbar || document.getElementById("sparkyUndoButton")) {
+        return;
+    }
+
+    const undoRedoGroup = document.createElement("div");
+    undoRedoGroup.className = "btn-group";
+
+    const undoButton = document.createElement("button");
+    undoButton.type = "button";
+    undoButton.id = "sparkyUndoButton";
+    undoButton.className = "btn btn-sm btn-secondary";
+    undoButton.innerHTML = '<span class="icon-undo" aria-hidden="true"></span> Undo';
+    undoButton.addEventListener("click", sparkyUndoAction);
+
+    const redoButton = document.createElement("button");
+    redoButton.type = "button";
+    redoButton.id = "sparkyRedoButton";
+    redoButton.className = "btn btn-sm btn-secondary";
+    redoButton.innerHTML = '<span class="icon-redo" aria-hidden="true"></span> Redo';
+    redoButton.addEventListener("click", sparkyRedoAction);
+
+    undoRedoGroup.appendChild(undoButton);
+    undoRedoGroup.appendChild(redoButton);
+    toolbar.appendChild(undoRedoGroup);
+
+    updateSparkyHistoryButtons();
+}
+
 function queueBlockControlScroll(rowPosition, columnPosition, blockPosition, controlClassName, clientY) {
     pendingBlockControlScroll = {
         row: Number(rowPosition),
@@ -2326,6 +2418,7 @@ function refreshSparky() {
 
     applyPendingParagraphFocus();
     applyPendingBlockControlScroll();
+    recordSparkyHistoryState();
 
     console.log(sparkyPageContentArray)
 
