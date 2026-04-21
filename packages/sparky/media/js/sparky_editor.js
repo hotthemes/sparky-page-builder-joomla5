@@ -953,7 +953,7 @@ function createEditableContentFromArray(arr) {
 
     });
 
-    sparkyHTML += `<div id="add_sparky_row"><a title="Add Row">Add Row</a></div><div class="joomla_buttons_container"><div id="add_read_more"><a title="Read More Tag">Read More</a></div><div id="add_page_break"><a title="Page Break Tag">Page Break</a></div></div>`;
+    sparkyHTML += `<div class="sparky_bottom_actions"><div id="add_sparky_row"><a title="Add Row">Add Row</a></div><div class="joomla_buttons_container"><div id="add_read_more"><a title="Read More Tag">Read More</a></div><div id="add_page_break"><a title="Page Break Tag">Page Break</a></div></div></div>`;
 
     return sparkyHTML;
 
