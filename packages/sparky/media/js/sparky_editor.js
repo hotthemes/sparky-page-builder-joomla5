@@ -2025,12 +2025,20 @@ recordSparkyHistoryState();
 
 //// VII drag and drop
 
+let currentDragType = "";
+
 function isRowDragEvent(event) {
+    if (currentDragType === "row") {
+        return true;
+    }
     const rowId = event.dataTransfer.getData("text");
     return rowId.startsWith("row_") || rowId === "system-readmore";
 }
 
 function isColumnDragEvent(event) {
+    if (currentDragType === "column") {
+        return true;
+    }
     return Boolean(event.dataTransfer.getData("column_class"));
 }
 
@@ -2039,12 +2047,14 @@ function isColumnDragEvent(event) {
 
 function onRowDragStart(event) {
 
+    currentDragType = "row";
     event.dataTransfer.setData('text/plain', event.target.id);
     event.currentTarget.style.borderColor = 'red';
 
 }
 
 function onRowDragEnd(event){
+    currentDragType = "";
     event.currentTarget.style.borderColor = '#ccc';
     //event.dataTransfer.clearData();
 
@@ -2136,6 +2146,7 @@ function setColumnDropIndicator(targetElement, insertAfterTarget) {
 
 function onColumnDragStart(event) {
 
+    currentDragType = "column";
     draggedColumn = event.currentTarget;
     clearBlockDropIndicator();
 
@@ -2148,6 +2159,7 @@ function onColumnDragStart(event) {
 }
 
 function onColumnDragEnd(event){
+    currentDragType = "";
     event.currentTarget.style.borderColor = '#ccc';
     clearColumnDropIndicator();
     //event.dataTransfer.clearData();
@@ -2309,6 +2321,7 @@ function onDropToBlock(event) {
 
 function onBlockDragStart(event) {
 
+    currentDragType = "block";
     // display block drop zones
     blockDropZones(true, event.currentTarget);
 
@@ -2336,6 +2349,7 @@ function onBlockDragEnd(event){
     blockDropZones(false, event.currentTarget);
     clearBlockDropIndicator();
     draggedBlock = null;
+    currentDragType = "";
 
     event.currentTarget.style.borderColor = '#ccc';
     //event.dataTransfer.clearData();
