@@ -2105,10 +2105,39 @@ function onRowDrop(event) {
 // drag and drop columns
 
 let draggedColumn;
+let activeColumnDropIndicator = null;
+let activeColumnDropIndicatorPosition = "";
+
+function clearColumnDropIndicator() {
+    if (!activeColumnDropIndicator) {
+        return;
+    }
+    activeColumnDropIndicator.classList.remove("sparky_column_drop_target_before", "sparky_column_drop_target_after");
+    activeColumnDropIndicator = null;
+    activeColumnDropIndicatorPosition = "";
+}
+
+function setColumnDropIndicator(targetElement, insertAfterTarget) {
+    if (!targetElement) {
+        clearColumnDropIndicator();
+        return;
+    }
+
+    const nextPosition = insertAfterTarget ? "after" : "before";
+    if (activeColumnDropIndicator === targetElement && activeColumnDropIndicatorPosition === nextPosition) {
+        return;
+    }
+
+    clearColumnDropIndicator();
+    activeColumnDropIndicator = targetElement;
+    activeColumnDropIndicatorPosition = nextPosition;
+    activeColumnDropIndicator.classList.add(insertAfterTarget ? "sparky_column_drop_target_after" : "sparky_column_drop_target_before");
+}
 
 function onColumnDragStart(event) {
 
     draggedColumn = event.currentTarget;
+    clearBlockDropIndicator();
 
     event.dataTransfer.setData("column", event.target.outerHTML);
     event.dataTransfer.setData("parent_row", event.target.parentNode.parentNode.id);
@@ -2120,6 +2149,7 @@ function onColumnDragStart(event) {
 
 function onColumnDragEnd(event){
     event.currentTarget.style.borderColor = '#ccc';
+    clearColumnDropIndicator();
     //event.dataTransfer.clearData();
 
 }
@@ -2130,7 +2160,9 @@ function onColumnDragOver(event) {
         return;
     }
     event.preventDefault();
-    event.currentTarget.style.backgroundColor = '#2f7d32';
+    const targetRect = event.currentTarget.getBoundingClientRect();
+    const insertAfterTarget = event.clientX > (targetRect.left + targetRect.width / 2);
+    setColumnDropIndicator(event.currentTarget, insertAfterTarget);
 
 }
 
@@ -2140,13 +2172,13 @@ function onColumnDragLeave(event) {
         return;
     }
     event.preventDefault();
-    event.currentTarget.style.backgroundColor = '';
 
 }
 
 function onColumnDrop(event) {
 
     event.preventDefault();
+    clearColumnDropIndicator();
 
     // prevent dropping columns to other rows
     if ( event.currentTarget.parentNode.parentNode.id !== event.dataTransfer.getData("parent_row") ) {
@@ -2282,6 +2314,7 @@ function onBlockDragStart(event) {
 
     draggedBlock = event.currentTarget;
     draggedBlockSettings = event.currentTarget.previousSibling;
+    clearColumnDropIndicator();
 
     event.dataTransfer.setData("block_parent_row", event.target.parentNode.parentNode.parentNode.className);
     event.dataTransfer.setData("block_parent_column", event.target.parentNode.className);
@@ -2302,6 +2335,7 @@ function onBlockDragEnd(event){
     // deactivate row drop zones
     blockDropZones(false, event.currentTarget);
     clearBlockDropIndicator();
+    draggedBlock = null;
 
     event.currentTarget.style.borderColor = '#ccc';
     //event.dataTransfer.clearData();
