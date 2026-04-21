@@ -2028,18 +2028,11 @@ recordSparkyHistoryState();
 let currentDragType = "";
 
 function isRowDragEvent(event) {
-    if (currentDragType === "row") {
-        return true;
-    }
-    const rowId = event.dataTransfer.getData("text");
-    return rowId.startsWith("row_") || rowId === "system-readmore";
+    return currentDragType === "row";
 }
 
 function isColumnDragEvent(event) {
-    if (currentDragType === "column") {
-        return true;
-    }
-    return Boolean(event.dataTransfer.getData("column_class"));
+    return currentDragType === "column";
 }
 
 
@@ -2104,6 +2097,7 @@ function onRowDrop(event) {
 
         sparkyPageContentArray = moveArrayItemToNewIndex(sparkyPageContentArray, oldRowPosition, newRowPosition);
 
+        currentDragType = "";
         refreshSparky();
 
     }
@@ -2223,6 +2217,7 @@ function onColumnDrop(event) {
 
     //event.dataTransfer.clearData();
 
+    currentDragType = "";
     refreshSparky();
 
 }
@@ -2316,6 +2311,7 @@ function onDropToBlock(event) {
     }
     whereToRemove.splice(startingBlock, 1);
 
+    currentDragType = "";
     refreshSparky();
 }
 
