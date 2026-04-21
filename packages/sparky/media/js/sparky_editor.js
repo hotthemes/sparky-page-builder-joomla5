@@ -2039,14 +2039,20 @@ function isColumnDragEvent(event) {
 // drag and drop rows
 
 function onRowDragStart(event) {
+    if (event.currentTarget !== event.target) {
+        return;
+    }
 
     currentDragType = "row";
-    event.dataTransfer.setData('text/plain', event.target.id);
+    event.dataTransfer.setData('text/plain', event.currentTarget.id);
     event.currentTarget.style.borderColor = 'red';
 
 }
 
 function onRowDragEnd(event){
+    if (event.currentTarget !== event.target) {
+        return;
+    }
     currentDragType = "";
     event.currentTarget.style.borderColor = '#ccc';
     //event.dataTransfer.clearData();
@@ -2139,20 +2145,27 @@ function setColumnDropIndicator(targetElement, insertAfterTarget) {
 }
 
 function onColumnDragStart(event) {
+    if (event.currentTarget !== event.target) {
+        return;
+    }
+    event.stopPropagation();
 
     currentDragType = "column";
     draggedColumn = event.currentTarget;
     clearBlockDropIndicator();
 
-    event.dataTransfer.setData("column", event.target.outerHTML);
-    event.dataTransfer.setData("parent_row", event.target.parentNode.parentNode.id);
-    event.dataTransfer.setData("parent_row_class", event.target.parentNode.parentNode.className);
-    event.dataTransfer.setData("column_class", event.target.className);
+    event.dataTransfer.setData("column", event.currentTarget.outerHTML);
+    event.dataTransfer.setData("parent_row", event.currentTarget.parentNode.parentNode.id);
+    event.dataTransfer.setData("parent_row_class", event.currentTarget.parentNode.parentNode.className);
+    event.dataTransfer.setData("column_class", event.currentTarget.className);
     event.currentTarget.style.borderColor = 'red';
 
 }
 
 function onColumnDragEnd(event){
+    if (event.currentTarget !== event.target) {
+        return;
+    }
     currentDragType = "";
     event.currentTarget.style.borderColor = '#ccc';
     clearColumnDropIndicator();
@@ -2316,6 +2329,10 @@ function onDropToBlock(event) {
 }
 
 function onBlockDragStart(event) {
+    if (event.currentTarget !== event.target) {
+        return;
+    }
+    event.stopPropagation();
 
     currentDragType = "block";
     // display block drop zones
@@ -2325,10 +2342,10 @@ function onBlockDragStart(event) {
     draggedBlockSettings = event.currentTarget.previousSibling;
     clearColumnDropIndicator();
 
-    event.dataTransfer.setData("block_parent_row", event.target.parentNode.parentNode.parentNode.className);
-    event.dataTransfer.setData("block_parent_column", event.target.parentNode.className);
-    event.dataTransfer.setData("block_position", event.target.previousSibling.className);
-    event.dataTransfer.setData("block", event.target.previousSibling.outerHTML + event.target.outerHTML);
+    event.dataTransfer.setData("block_parent_row", event.currentTarget.parentNode.parentNode.parentNode.className);
+    event.dataTransfer.setData("block_parent_column", event.currentTarget.parentNode.className);
+    event.dataTransfer.setData("block_position", event.currentTarget.previousSibling.className);
+    event.dataTransfer.setData("block", event.currentTarget.previousSibling.outerHTML + event.currentTarget.outerHTML);
     event.currentTarget.style.borderColor = 'red';
 
 }
@@ -2340,6 +2357,9 @@ function onImageDragStart(event) {
 }
 
 function onBlockDragEnd(event){
+    if (event.currentTarget !== event.target) {
+        return;
+    }
 
     // deactivate row drop zones
     blockDropZones(false, event.currentTarget);
