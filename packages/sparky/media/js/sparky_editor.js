@@ -12,6 +12,7 @@ const SPARKY_DEFAULT_ROW_CLASS = "sparky_page_row sparky_row0";
 const SPARKY_DEFAULT_COLUMN_CLASS = "sparkle12 sparky_cell sparky_col0";
 const SPARKY_DEFAULT_ANIMATION = [ "", 0, "" ];
 let pendingBlockControlScroll = null;
+let pendingRowControlScroll = null;
 let pendingParagraphFocus = null;
 let sparkyHistory = [];
 let sparkyHistoryIndex = -1;
@@ -1501,6 +1502,7 @@ function sparkyEditorButtonsEvents() {
             let sparkyRowPosition = Number(determineRowPosition(event.composedPath()[1].nextSibling.className));
 
             if ( sparkyRowPosition - 1 >= 0 ) {
+                queueRowControlScroll(sparkyRowPosition - 1, "row_up", event.clientY);
                 sparkyPageContentArray = moveArrayItemToNewIndex(sparkyPageContentArray, sparkyRowPosition, sparkyRowPosition - 1);
                 refreshSparky();
             }
@@ -1519,6 +1521,7 @@ function sparkyEditorButtonsEvents() {
             let sparkyRowPosition = Number(determineRowPosition(event.composedPath()[1].nextSibling.className));
 
             if ( sparkyPageContentArray.length - 1 > sparkyRowPosition ) {
+                queueRowControlScroll(sparkyRowPosition + 1, "row_down", event.clientY);
                 sparkyPageContentArray = moveArrayItemToNewIndex(sparkyPageContentArray, sparkyRowPosition, sparkyRowPosition + 1);
                 refreshSparky();
             }
@@ -2401,6 +2404,31 @@ function queueBlockControlScroll(rowPosition, columnPosition, blockPosition, con
     };
 }
 
+function queueRowControlScroll(rowPosition, controlClassName, clientY) {
+    pendingRowControlScroll = {
+        row: Number(rowPosition),
+        controlClassName: controlClassName,
+        clientY: clientY
+    };
+}
+
+function applyPendingRowControlScroll() {
+    if (!pendingRowControlScroll) {
+        return;
+    }
+
+    const rowElement = sparkyPageContentEditable.querySelector(".sparky_row" + pendingRowControlScroll.row);
+    const rowSettings = rowElement ? rowElement.previousSibling : null;
+    const rowControlButton = rowSettings ? rowSettings.querySelector("." + pendingRowControlScroll.controlClassName) : null;
+
+    if (rowControlButton) {
+        const buttonPosition = rowControlButton.getBoundingClientRect();
+        window.scrollBy(0, buttonPosition.top - pendingRowControlScroll.clientY);
+    }
+
+    pendingRowControlScroll = null;
+}
+
 function applyPendingBlockControlScroll() {
     if (!pendingBlockControlScroll) {
         return;
@@ -2432,6 +2460,7 @@ function refreshSparky() {
     sparkyEditorDraggableEditableEvents();
 
     applyPendingParagraphFocus();
+    applyPendingRowControlScroll();
     applyPendingBlockControlScroll();
     recordSparkyHistoryState();
 
