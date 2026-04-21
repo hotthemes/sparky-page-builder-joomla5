@@ -2025,6 +2025,15 @@ recordSparkyHistoryState();
 
 //// VII drag and drop
 
+function isRowDragEvent(event) {
+    const rowId = event.dataTransfer.getData("text");
+    return rowId.startsWith("row_") || rowId === "system-readmore";
+}
+
+function isColumnDragEvent(event) {
+    return Boolean(event.dataTransfer.getData("column_class"));
+}
+
 
 // drag and drop rows
 
@@ -2043,6 +2052,9 @@ function onRowDragEnd(event){
 
 function onRowDragOver(event) {
 
+    if (!isRowDragEvent(event)) {
+        return;
+    }
     event.preventDefault();
     event.currentTarget.style.backgroundColor = '#2f7d32';
 
@@ -2050,6 +2062,9 @@ function onRowDragOver(event) {
 
 function onRowDragLeave(event) {
 
+    if (!isRowDragEvent(event)) {
+        return;
+    }
     event.preventDefault();
     event.currentTarget.style.backgroundColor = '';
 
@@ -2111,6 +2126,9 @@ function onColumnDragEnd(event){
 
 function onColumnDragOver(event) {
 
+    if (!isColumnDragEvent(event)) {
+        return;
+    }
     event.preventDefault();
     event.currentTarget.style.backgroundColor = '#2f7d32';
 
@@ -2118,6 +2136,9 @@ function onColumnDragOver(event) {
 
 function onColumnDragLeave(event) {
 
+    if (!isColumnDragEvent(event)) {
+        return;
+    }
     event.preventDefault();
     event.currentTarget.style.backgroundColor = '';
 
@@ -2197,6 +2218,8 @@ function setBlockDropIndicator(targetElement, insertAfterTarget) {
 }
 
 function onDropToBlock(event) {
+    event.stopPropagation();
+
     if (event.type === "dragover") {
         event.preventDefault();
         if (!draggedBlock || event.currentTarget === draggedBlock) {
