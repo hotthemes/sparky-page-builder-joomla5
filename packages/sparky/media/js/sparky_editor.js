@@ -2620,9 +2620,15 @@ function rowDropZones(bool, row) {
             // don't activate dropzone just before/after the row (unnecessary)
             if (zone !== row.previousSibling.previousSibling && zone !== row.nextSibling) {
                 zone.style.opacity = 1;
+                zone.style.height = "30px";
+                zone.style.margin = "10px 0";
+                zone.style.pointerEvents = "auto";
             }
         } else {
             zone.style.opacity = 0;
+            zone.style.height = "0";
+            zone.style.margin = "0";
+            zone.style.pointerEvents = "none";
         }
 
     });
@@ -2647,9 +2653,15 @@ function columnDropZones(bool, column) {
                 zone.parentNode === column.parentNode
                 ) {
                 zone.style.opacity = 1;
+                zone.style.width = "10px";
+                zone.style.margin = "10px 5px";
+                zone.style.pointerEvents = "auto";
             }
         } else {
             zone.style.opacity = 0;
+            zone.style.width = "0";
+            zone.style.margin = "0";
+            zone.style.pointerEvents = "none";
         }
 
     });
@@ -2667,9 +2679,15 @@ function blockDropZones(bool, block) {
             // don't activate dropzone just before/after the block (unnecessary)
             if (zone !== block.previousSibling.previousSibling && zone !== block.nextSibling) {
                 zone.style.opacity = 1;
+                zone.style.height = "10px";
+                zone.style.margin = "10px";
+                zone.style.pointerEvents = "auto";
             }
         } else {
             zone.style.opacity = 0;
+            zone.style.height = "0";
+            zone.style.margin = "0";
+            zone.style.pointerEvents = "none";
         }
 
     });
