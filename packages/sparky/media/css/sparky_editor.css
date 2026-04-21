@@ -110,6 +110,7 @@ a.add_block {
 }
 .column_settings_buttons {
     border-bottom: 1px dotted #ccc;
+    margin-bottom: 5px;
 }
 .column_settings_buttons a {
     font-size: 0.8em;
@@ -134,10 +135,33 @@ a.add_block {
 }
 .block_settings_buttons {
     padding: 0 10px;
+    display: none;
+    opacity: 0;
+    transform: translateY(-4px);
+}
+.block_settings_buttons.block_toolbar_visible {
+    display: block;
+    animation: sparkyToolbarFadeIn 0.3s ease forwards;
 }
 .block_settings_buttons a {
     padding: 0 10px;
     font-size: 0.8em;
+}
+.block_settings_buttons + * {
+    transition: margin-top 0.3s ease;
+}
+.block_settings_buttons + *.block_hover_shift {
+    margin-top: 6px;
+}
+@keyframes sparkyToolbarFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 .row_settings_buttons a:hover,
 .column_settings_buttons a:hover,
@@ -295,7 +319,7 @@ a.add_block::before, a.add_block_after_block::before {
 .block_settings_buttons + * {
     box-sizing: border-box;
     border: 1px dotted #ccc;
-    margin: 10px;
+    margin: 0 5px;
     padding: 10px;
 }
 .block_settings_buttons + hr {
