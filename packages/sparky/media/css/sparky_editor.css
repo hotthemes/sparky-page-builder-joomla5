@@ -27,7 +27,7 @@ body {
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    padding: 2.5px;
+    padding: 0;
 }
 .row_full_width.row_fluid .sparky_page_container {
     max-width: 100%;
@@ -76,7 +76,7 @@ body {
 }
 #sparkyPageContentEditable .sparky_cell {
     border: 1px dotted #ccc;
-    margin: 0;
+    margin: 2.5px;
 }
 #add_sparky_row, .add_block_container {
     text-align: center;
