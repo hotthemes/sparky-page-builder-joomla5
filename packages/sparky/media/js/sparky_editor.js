@@ -2167,22 +2167,55 @@ function onColumnDrop(event) {
 
 let draggedBlock;
 let draggedBlockSettings;
+let activeBlockDropIndicator = null;
+let activeBlockDropIndicatorPosition = "";
+
+function clearBlockDropIndicator() {
+    if (!activeBlockDropIndicator) {
+        return;
+    }
+    activeBlockDropIndicator.classList.remove("sparky_block_drop_target_before", "sparky_block_drop_target_after");
+    activeBlockDropIndicator = null;
+    activeBlockDropIndicatorPosition = "";
+}
+
+function setBlockDropIndicator(targetElement, insertAfterTarget) {
+    if (!targetElement) {
+        clearBlockDropIndicator();
+        return;
+    }
+
+    const nextPosition = insertAfterTarget ? "after" : "before";
+    if (activeBlockDropIndicator === targetElement && activeBlockDropIndicatorPosition === nextPosition) {
+        return;
+    }
+
+    clearBlockDropIndicator();
+    activeBlockDropIndicator = targetElement;
+    activeBlockDropIndicatorPosition = nextPosition;
+    activeBlockDropIndicator.classList.add(insertAfterTarget ? "sparky_block_drop_target_after" : "sparky_block_drop_target_before");
+}
 
 function onDropToBlock(event) {
     if (event.type === "dragover") {
         event.preventDefault();
-        event.currentTarget.style.backgroundColor = '#2f7d32';
+        if (!draggedBlock || event.currentTarget === draggedBlock) {
+            clearBlockDropIndicator();
+            return;
+        }
+        const targetRect = event.currentTarget.getBoundingClientRect();
+        const insertAfterTarget = event.clientY > (targetRect.top + targetRect.height / 2);
+        setBlockDropIndicator(event.currentTarget, insertAfterTarget);
         return;
     }
 
     if (event.type === "dragleave") {
         event.preventDefault();
-        event.currentTarget.style.backgroundColor = '';
         return;
     }
 
     event.preventDefault();
-    event.currentTarget.style.backgroundColor = '';
+    clearBlockDropIndicator();
 
     let startingRow = event.dataTransfer.getData("block_parent_row");
     startingRow = startingRow.split("sparky_row")[startingRow.split("sparky_row").length-1];
@@ -2245,6 +2278,7 @@ function onBlockDragEnd(event){
 
     // deactivate row drop zones
     blockDropZones(false, event.currentTarget);
+    clearBlockDropIndicator();
 
     event.currentTarget.style.borderColor = '#ccc';
     //event.dataTransfer.clearData();
@@ -2254,14 +2288,19 @@ function onBlockDragEnd(event){
 function onBlockDragOver(event) {
 
     event.preventDefault();
-    event.currentTarget.style.backgroundColor = '#2f7d32';
+    if (!draggedBlock || event.currentTarget === draggedBlock) {
+        clearBlockDropIndicator();
+        return;
+    }
+    const targetRect = event.currentTarget.getBoundingClientRect();
+    const insertAfterTarget = event.clientY > (targetRect.top + targetRect.height / 2);
+    setBlockDropIndicator(event.currentTarget, insertAfterTarget);
 
 }
 
 function onBlockDragLeave(event) {
 
     event.preventDefault();
-    event.currentTarget.style.backgroundColor = '#98c29a';
 
 }
 
