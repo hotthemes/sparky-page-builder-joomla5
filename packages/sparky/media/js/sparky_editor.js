@@ -2026,6 +2026,33 @@ recordSparkyHistoryState();
 //// VII drag and drop
 
 let currentDragType = "";
+let activeRowDropIndicator = null;
+let activeRowDropIndicatorPosition = "";
+
+function clearRowDropIndicator() {
+    if (!activeRowDropIndicator) {
+        return;
+    }
+    activeRowDropIndicator.classList.remove("sparky_row_drop_target_before", "sparky_row_drop_target_after");
+    activeRowDropIndicator = null;
+    activeRowDropIndicatorPosition = "";
+}
+
+function setRowDropIndicator(targetElement, insertAfterTarget) {
+    if (!targetElement) {
+        clearRowDropIndicator();
+        return;
+    }
+    const nextPosition = insertAfterTarget ? "after" : "before";
+    if (activeRowDropIndicator === targetElement && activeRowDropIndicatorPosition === nextPosition) {
+        return;
+    }
+
+    clearRowDropIndicator();
+    activeRowDropIndicator = targetElement;
+    activeRowDropIndicatorPosition = nextPosition;
+    activeRowDropIndicator.classList.add(insertAfterTarget ? "sparky_row_drop_target_after" : "sparky_row_drop_target_before");
+}
 
 function isRowDragEvent(event) {
     return currentDragType === "row";
@@ -2044,6 +2071,8 @@ function onRowDragStart(event) {
     }
 
     currentDragType = "row";
+    clearColumnDropIndicator();
+    clearBlockDropIndicator();
     event.dataTransfer.setData('text/plain', event.currentTarget.id);
     event.currentTarget.style.borderColor = 'red';
 
@@ -2054,6 +2083,7 @@ function onRowDragEnd(event){
         return;
     }
     currentDragType = "";
+    clearRowDropIndicator();
     event.currentTarget.style.borderColor = '#ccc';
     //event.dataTransfer.clearData();
 
@@ -2065,7 +2095,9 @@ function onRowDragOver(event) {
         return;
     }
     event.preventDefault();
-    event.currentTarget.style.backgroundColor = '#2f7d32';
+    const targetRect = event.currentTarget.getBoundingClientRect();
+    const insertAfterTarget = event.clientY > (targetRect.top + targetRect.height / 2);
+    setRowDropIndicator(event.currentTarget, insertAfterTarget);
 
 }
 
@@ -2075,13 +2107,13 @@ function onRowDragLeave(event) {
         return;
     }
     event.preventDefault();
-    event.currentTarget.style.backgroundColor = '';
 
 }
 
 function onRowDrop(event) {
 
     event.preventDefault();
+    clearRowDropIndicator();
 
     // check if dragged element is a row (if row id starts with "row_")
     if ( event.dataTransfer.getData('text').startsWith("row_") || event.dataTransfer.getData('text') === "system-readmore" ) {
