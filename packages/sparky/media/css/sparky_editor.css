@@ -295,7 +295,7 @@ a.add_block::before, a.add_block_after_block::before {
 .block_settings_buttons + * {
     box-sizing: border-box;
     border: 1px dotted #ccc;
-    margin: 10px;
+    margin: 5px;
     padding: 10px;
 }
 .block_settings_buttons + hr {

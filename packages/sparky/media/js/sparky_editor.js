@@ -2634,7 +2634,6 @@ function refreshSparky() {
     applyPendingBlockControlScroll();
     recordSparkyHistoryState();
 
-    console.log(sparkyPageContentArray)
 
 }
 
