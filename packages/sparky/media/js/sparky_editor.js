@@ -4,8 +4,20 @@
 
 // get sparky editor textarea & editor container
 let sparkyEditorTextarea = document.getElementById("sparkyEditorTextarea");
-let sparkyEditorTextareaValue = document.getElementById("sparkyEditorTextarea").value;
+let sparkyEditorTextareaValue = sparkyEditorTextarea.value;
 let sparkyPageContent = document.getElementById("sparkyPageContent");
+var sparkyPageContentArray;
+
+const SPARKY_DEFAULT_ROW_CLASS = "sparky_page_row sparky_row0";
+const SPARKY_DEFAULT_COLUMN_CLASS = "sparkle12 sparky_cell sparky_col0";
+const SPARKY_DEFAULT_ANIMATION = [ "", 0, "" ];
+let pendingBlockControlScroll = null;
+let pendingRowControlScroll = null;
+let pendingParagraphFocus = null;
+let addRowInsertAfterPosition = null;
+let sparkyHistory = [];
+let sparkyHistoryIndex = -1;
+let isApplyingHistoryState = false;
 
 // get page url (not used anywhere... yet)
 let sparkyPageUrl = window.location.href.split("/administrator/index.php");
@@ -16,8 +28,7 @@ let sparkyBackendUrl = sparkyPageUrl[0] + "/administrator/";
 joomla_path = joomla_path.replace(window.location.origin, "");
 
 // fix Joomla's background-image paths
-sparkyEditorTextareaValue = sparkyEditorTextareaValue.replaceAll('background-image: url('+joomla_path+'"', 'background-image: url("');
-sparkyEditorTextareaValue = sparkyEditorTextareaValue.replaceAll("background-image: url("+joomla_path+"'", "background-image: url('");
+sparkyEditorTextareaValue = normalizeBackgroundImagePaths(sparkyEditorTextareaValue, joomla_path);
 
 
 //// II
@@ -31,6 +42,8 @@ sparkyEditorTextareaValue = sparkyEditorTextareaValue.replaceAll("background-ima
 // parse HTML from textarea to HTML document
 const domparser = new DOMParser();
 const sparkyPageContentParsed = domparser.parseFromString(sparkyEditorTextareaValue, "text/html");
+const sparkyRows = getSparkyRowsFromParsedDocument(sparkyPageContentParsed);
+const firstSparkyRow = getFirstRowNode(sparkyRows);
 
 // accessing parsed HTML with:
 // sparkyPageContentParsed.childNodes[0].childNodes[1].childNodes
@@ -40,27 +53,7 @@ const sparkyPageContentParsed = domparser.parseFromString(sparkyEditorTextareaVa
 if (sparkyEditorTextarea.value === "") {
 
     // if new article, create initial content array
-
-    var sparkyPageContentArray = [];
-    let random_row_class = Math.floor((Math.random() * 100000000));
-
-    sparkyPageContentArray.push({
-        id: "row_" + random_row_class,
-        class: "sparky_page_row sparky_row0",
-        style: {},
-        content: []
-    });
-
-    sparkyPageContentArray[0].content.push({
-        id: "",
-        class: "sparkle12 sparky_cell sparky_col0",
-        style: {},
-        cols: 12,
-        animation: [ "", 0, "" ],
-        content: []
-    });
-
-    sparkyPageContentArray[0].content[0].content.push({
+    sparkyPageContentArray = createDefaultPageContentArray({
         id: "",
         class: "",
         style: {},
@@ -73,38 +66,10 @@ if (sparkyEditorTextarea.value === "") {
 } else {
 
     // check if the first element is a proper Sparky row
-    if (
-        !sparkyPageContentParsed.childNodes[0].childNodes[1].childNodes[0].id
-        ||
-        !sparkyPageContentParsed.childNodes[0].childNodes[1].childNodes[0].className
-        ||
-        !sparkyPageContentParsed.childNodes[0].childNodes[1].childNodes[0].className.includes("sparky_row0")
-        ||
-        !sparkyPageContentParsed.childNodes[0].childNodes[1].childNodes[0].className.includes("sparky_page_row")
-    ) {
+    if (!isSparkyFirstRow(firstSparkyRow)) {
 
         alert("This content is not created with the Sparky Page Builder!\n\nThe initial layout will be created and the existing content will be in a Custom HTML block.\n\nIf you don't want to edit this with  Sparky Page Builder, click OK and then close without saving.");
-
-        var sparkyPageContentArray = [];
-        let random_row_class = Math.floor((Math.random() * 100000000));
-
-        sparkyPageContentArray.push({
-            id: "row_" + random_row_class,
-            class: "sparky_page_row sparky_row0",
-            style: {},
-            content: []
-        });
-
-        sparkyPageContentArray[0].content.push({
-            id: "",
-            class: "sparkle12 sparky_cell sparky_col0",
-            style: {},
-            cols: 12,
-            animation: [ "", 0, "" ],
-            content: []
-        });
-
-        sparkyPageContentArray[0].content[0].content.push({
+        sparkyPageContentArray = createDefaultPageContentArray({
             id: "",
             class: "sparky_custom_html",
             style: {},
@@ -118,7 +83,7 @@ if (sparkyEditorTextarea.value === "") {
     } else {
 
         // if this article is created with Sparky, populate content array from the article's HTML
-        var sparkyPageContentArray = populateSparkyPageContentArray(sparkyPageContentParsed.childNodes[0].childNodes[1].childNodes);
+        sparkyPageContentArray = populateSparkyPageContentArray(sparkyRows);
 
     }
 }
@@ -131,6 +96,95 @@ if (sparkyEditorTextarea.value === "") {
 
 
 //// III
+
+function normalizeBackgroundImagePaths(content, path) {
+    return content
+        .replaceAll('background-image: url(' + path + '"', 'background-image: url("')
+        .replaceAll("background-image: url(" + path + "'", "background-image: url('");
+}
+
+function normalizeBoldTagsInHtml(content) {
+    return content
+        .replace(/<b(\s[^>]*)?>/gi, "<strong$1>")
+        .replace(/<\/b>/gi, "</strong>");
+}
+
+function removeLinksFromHtml(content) {
+    const contentTemplate = document.createElement("template");
+    contentTemplate.innerHTML = content;
+
+    contentTemplate.content.querySelectorAll("a").forEach(function(linkElement) {
+        let linkContent = document.createDocumentFragment();
+        while (linkElement.firstChild) {
+            linkContent.appendChild(linkElement.firstChild);
+        }
+        linkElement.replaceWith(linkContent);
+    });
+
+    return contentTemplate.innerHTML;
+}
+
+function isFullHeadingLink(blockElement) {
+    if (!blockElement || blockElement.children.length !== 1) {
+        return false;
+    }
+
+    const firstElement = blockElement.children[0];
+    if (!firstElement || firstElement.nodeName !== "A") {
+        return false;
+    }
+
+    return Array.from(blockElement.childNodes).every(function(node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            return !node.textContent.trim();
+        }
+        return node === firstElement;
+    });
+}
+
+function createDefaultPageContentArray(initialBlock) {
+    return [
+        {
+            id: generateRandomRowId(),
+            class: SPARKY_DEFAULT_ROW_CLASS,
+            style: {},
+            content: [
+                {
+                    id: "",
+                    class: SPARKY_DEFAULT_COLUMN_CLASS,
+                    style: {},
+                    cols: 12,
+                    animation: [ ...SPARKY_DEFAULT_ANIMATION ],
+                    content: [ initialBlock ]
+                }
+            ]
+        }
+    ];
+}
+
+function generateRandomRowId() {
+    return "row_" + Math.floor((Math.random() * 100000000));
+}
+
+function getSparkyRowsFromParsedDocument(parsedDocument) {
+    return parsedDocument?.body?.childNodes ?? [];
+}
+
+function getFirstRowNode(rows) {
+    for (const row of rows) {
+        if (row?.nodeType === Node.ELEMENT_NODE) {
+            return row;
+        }
+    }
+    return null;
+}
+
+function isSparkyFirstRow(firstRow) {
+    if (!firstRow || !firstRow.id || !firstRow.className) {
+        return false;
+    }
+    return firstRow.className.includes("sparky_row0") && firstRow.className.includes("sparky_page_row");
+}
 
 
 // populate sparkyPageContentArray with HTML from textarea
@@ -166,7 +220,7 @@ function populateSparkyPageContentArray(sparkyRows) {
         }
 
         sparkyPageContentArray.push({
-            id: row.id,
+            id: row.id || generateRandomRowId(),
             class: row.className,
             style: row.style,
             content: []
@@ -225,7 +279,7 @@ function populateSparkyPageContentArray(sparkyRows) {
                         class: block.className,
                         style: block.style,
                         type: "paragraph",
-                        content: block.innerHTML
+                        content: normalizeBoldTagsInHtml(block.innerHTML)
                     });
                 }
 
@@ -236,11 +290,15 @@ function populateSparkyPageContentArray(sparkyRows) {
                     // you can't access it just with block.link
                     let headingLink = "";
                     let headingTarget = false;
-                    if (block.children[0]) {
-                        if (block.children[0].nodeName === "A") {
-                            headingLink = block.children[0].getAttribute("href");
-                            headingTarget = block.children[0].getAttribute("target");
-                        }
+                    let headingHasFullLink = isFullHeadingLink(block);
+                    if (headingHasFullLink) {
+                        headingLink = block.children[0].getAttribute("href");
+                        headingTarget = block.children[0].getAttribute("target");
+                    }
+
+                    let headingContent = normalizeBoldTagsInHtml(block.innerHTML);
+                    if (headingHasFullLink) {
+                        headingContent = removeLinksFromHtml(headingContent);
                     }
 
                     sparkyPageContentArray[i].content[j].content.push({
@@ -251,7 +309,7 @@ function populateSparkyPageContentArray(sparkyRows) {
                         link: headingLink,
                         target: headingTarget,
                         level: block.nodeName,
-                        content: block.innerHTML
+                        content: headingContent
                     });
                     
                 }
@@ -338,7 +396,7 @@ function populateSparkyPageContentArray(sparkyRows) {
                         style: block.style,
                         type: "list",
                         listType: block.nodeName.toLowerCase(),
-                        content: block.innerHTML
+                        content: normalizeBoldTagsInHtml(block.innerHTML)
                     });
                 }
 
@@ -577,7 +635,6 @@ function createEditableContentFromArray(arr) {
 
         if (i === 0) {
             rowUp = '';
-            sparkyHTML += `<div data-rowdropzone="0" class="row_dropzone" ondragover="onRowDragOver(event);" ondragleave="onRowDragLeave(event);" ondrop="onRowDrop(event);"></div>`
         }
         if (sparkyPageContentArray.length-1 === i) {
             rowDown = '';
@@ -588,11 +645,11 @@ function createEditableContentFromArray(arr) {
         row.class = rowClassArr[0] + "sparky_row" + i;
 
         if ( row.id === "system-readmore" ) {
-            sparkyHTML += `<div class="row_settings_buttons">${rowUp}${rowDown}<a class="delete_row" title="Delete Read More Tag"></a></div><hr id="${row.id}" class="${row.class}" ${rowStyle} draggable="true" ondragstart="onRowDragStart(event);" ondragend="onRowDragEnd(event);">`;
+            sparkyHTML += `<div class="row_settings_buttons">${rowUp}${rowDown}<a class="delete_row" title="Delete Read More Tag"></a></div><hr id="${row.id}" class="${row.class}" ${rowStyle} draggable="true" ondragstart="onRowDragStart(event);" ondragend="onRowDragEnd(event);" ondragover="onRowDragOver(event);" ondragleave="onRowDragLeave(event);" ondrop="onRowDrop(event);">`;
         } else if ( row.class.includes("system-pagebreak") ) {
-            sparkyHTML += `<div class="row_settings_buttons"><a class="page_break_settings" title="Page Break Settings"></a>${rowUp}${rowDown}<a class="delete_row" title="Delete Page Break Tag"></a></div><hr id="${row.id}" class="system-pagebreak sparky_row${i}" title="${row.title}" alt="${row.alias}" draggable="true" ondragstart="onRowDragStart(event);" ondragend="onRowDragEnd(event);">`;
+            sparkyHTML += `<div class="row_settings_buttons"><a class="page_break_settings" title="Page Break Settings"></a>${rowUp}${rowDown}<a class="delete_row" title="Delete Page Break Tag"></a></div><hr id="${row.id}" class="system-pagebreak sparky_row${i}" title="${row.title}" alt="${row.alias}" draggable="true" ondragstart="onRowDragStart(event);" ondragend="onRowDragEnd(event);" ondragover="onRowDragOver(event);" ondragleave="onRowDragLeave(event);" ondrop="onRowDrop(event);">`;
         } else {
-            sparkyHTML += `<div class="row_settings_buttons"><a class="row_settings" title="Row Settings"></a><a class="copy_row" title="Copy Row"></a><a class="add_column" title="Add Column"></a>${rowUp}${rowDown}<a class="delete_row" title="Delete Row"></a></div><div id="${row.id}" class="${row.class}" ${rowStyle} draggable="true" ondragstart="onRowDragStart(event);" ondragend="onRowDragEnd(event);"><div class="sparky_page_container">`;
+            sparkyHTML += `<div class="row_settings_buttons"><a class="row_settings" title="Row Settings"></a><a class="copy_row" title="Copy Row"></a><a class="add_row_after" title="Add Row Below"></a><a class="add_column" title="Add Column"></a>${rowUp}${rowDown}<a class="delete_row" title="Delete Row"></a></div><div id="${row.id}" class="${row.class}" ${rowStyle} draggable="true" ondragstart="onRowDragStart(event);" ondragend="onRowDragEnd(event);" ondragover="onRowDragOver(event);" ondragleave="onRowDragLeave(event);" ondrop="onRowDrop(event);"><div class="sparky_page_container">`;
         }
 
         let j = 0;
@@ -617,7 +674,7 @@ function createEditableContentFromArray(arr) {
                 column.class = "sparkle" + column.cols + " sparky_cell sparky_col" + j;
             }
 
-            sparkyHTML += `<div class="column_dropzone" ondragover="onColumnDragOver(event);" ondragleave="onColumnDragLeave(event);" ondrop="onColumnDrop(event);"></div><div class="${column.class}" ${columnStyle} draggable="true" ondragstart="onColumnDragStart(event);" ondragend="onColumnDragEnd(event);"><div class="column_settings_buttons"><a class="column_settings" title="Column Settings"></a><a class="column_increase" title="Increase Column"></a><a class="column_decrease" title="Decrease Column"></a><a class="column_left" title="Move Left"></a><a class="column_right" title="Move Right"></a><a class="delete_column" title="Delete Column"></a></div><div data-blockdropzone="0" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+            sparkyHTML += `<div class="${column.class}" ${columnStyle} draggable="true" ondragstart="onColumnDragStart(event);" ondragend="onColumnDragEnd(event);" ondragover="onColumnDragOver(event);" ondragleave="onColumnDragLeave(event);" ondrop="onColumnDrop(event);"><div class="column_settings_buttons"><a class="column_settings" title="Column Settings"></a><a class="column_increase" title="Increase Column"></a><a class="column_decrease" title="Decrease Column"></a><a class="column_left" title="Move Left"></a><a class="column_right" title="Move Right"></a><a class="delete_column" title="Delete Column"></a></div>`;
 
                 let k = 0;
                 let dz = 1;
@@ -630,7 +687,7 @@ function createEditableContentFromArray(arr) {
                     let blockAlt = "";                        
                     let blockTarget = "";                   
                     let blockSrc = "";
-                    let blockUp = '<a class="block_up" title="Move Up">';
+                    let blockUp = '<a class="block_up" title="Move Up"></a>';
                     let blockDown = '<a class="block_down" title="Move Down"></a>';
 
                     if (block.id) blockId = ` id="${block.id}"`;
@@ -657,11 +714,17 @@ function createEditableContentFromArray(arr) {
                     switch (block.type) {
 
                         case "paragraph":
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="add_paragraph_link" title="Add Link"></a><a class="delete_block" title="Delete Block"></a></div><p${blockId}${blockClass} ${blockStyle} contenteditable="true" draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${block.content}</p><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="add_paragraph_link" title="Add Link"></a><a class="add_paragraph_bold" title="Bold"></a><a class="add_paragraph_italic" title="Italic"></a><a class="add_paragraph_underline" title="Underline"></a><a class="delete_block" title="Delete Block"></a></div><p${blockId}${blockClass} ${blockStyle} contenteditable="true" draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondragover="onDropToBlock(event);" ondragleave="onDropToBlock(event);" ondrop="onDropToBlock(event);">${block.content}</p>`;
                             break;
 
                         case "heading":
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><${block.level}${blockId}${blockClass}${blockStyle} contenteditable="true" draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">`;
+                            let headingLinkButtonClass = "add_heading_link";
+                            let headingLinkButtonTitle = "Add Link";
+                            if (block.link) {
+                                headingLinkButtonClass += " heading_link_disabled";
+                                headingLinkButtonTitle = "Link disabled because Heading Settings has a link";
+                            }
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="${headingLinkButtonClass}" title="${headingLinkButtonTitle}"></a><a class="add_heading_bold" title="Bold"></a><a class="add_heading_italic" title="Italic"></a><a class="add_heading_underline" title="Underline"></a><a class="delete_block" title="Delete Block"></a></div><${block.level}${blockId}${blockClass}${blockStyle} contenteditable="true" draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondragover="onDropToBlock(event);" ondragleave="onDropToBlock(event);" ondrop="onDropToBlock(event);">`;
                             if ( block.link && ! block.content.includes("href=") ) {
                                 sparkyHTML += `<a href="${block.link}"${blockTarget}>`
                             }
@@ -669,42 +732,42 @@ function createEditableContentFromArray(arr) {
                             if ( block.link && ! block.content.includes("href=") ) {
                                 sparkyHTML += `</a>`
                             }
-                            sparkyHTML += `</${block.level}><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `</${block.level}>`;
                             break;
 
                         case "image":
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><figure draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><figure draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondragover="onDropToBlock(event);" ondragleave="onDropToBlock(event);" ondrop="onDropToBlock(event);">`;
                             if ( block.link ) {
                                 sparkyHTML += `<a href="${block.link}"${blockTarget}>`
                             }
-                            sparkyHTML += `<img${blockId}${blockClass} ${blockStyle} src="${blockSrc}" alt="${blockAlt}" ondragstart="onImageDragStart(event);" ondrop="onDropToBlock(event);" />`;
+                            sparkyHTML += `<img${blockId}${blockClass} ${blockStyle} src="${blockSrc}" alt="${blockAlt}" ondragstart="onImageDragStart(event);" ondragover="onDropToBlock(event);" ondragleave="onDropToBlock(event);" ondrop="onDropToBlock(event);" />`;
                             if ( block.link ) {
                                 sparkyHTML += `</a>`
                             }
-                            sparkyHTML += `</figure><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `</figure>`;
                             break;
 
                         case "separator":
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><hr${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);"/><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><hr${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondragover="onDropToBlock(event);" ondragleave="onDropToBlock(event);" ondrop="onDropToBlock(event);"/>`;
                             break;
 
                         case "spacer":
                             if (!blockStyle) {
                                 blockStyle = " style='height:50px'";
                             }
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><div${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);"></div><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><div${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondragover="onDropToBlock(event);" ondragleave="onDropToBlock(event);" ondrop="onDropToBlock(event);"></div>`;
                             break;
 
                         case "button":
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><a href="${block.link}" ${blockTarget} ${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${block.content}</a><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><a href="${block.link}" ${blockTarget} ${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondragover="onDropToBlock(event);" ondragleave="onDropToBlock(event);" ondrop="onDropToBlock(event);">${block.content}</a>`;
                             break;
 
                         case "list":
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="add_paragraph_link" title="Add Link"></a><a class="delete_block" title="Delete Block"></a></div><${block.listType}${blockId}${blockClass} ${blockStyle} contenteditable="true" draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${block.content}</${block.listType}><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="add_paragraph_link" title="Add Link"></a><a class="add_paragraph_bold" title="Bold"></a><a class="add_paragraph_italic" title="Italic"></a><a class="add_paragraph_underline" title="Underline"></a><a class="delete_block" title="Delete Block"></a></div><${block.listType}${blockId}${blockClass} ${blockStyle} contenteditable="true" draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondragover="onDropToBlock(event);" ondragleave="onDropToBlock(event);" ondrop="onDropToBlock(event);">${block.content}</${block.listType}>`;
                             break;
 
                         case "iframe":
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><iframe${blockId}${blockClass} ${blockStyle} src="${block.src}" draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);"></iframe><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><iframe${blockId}${blockClass} ${blockStyle} src="${block.src}" draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondragover="onDropToBlock(event);" ondragleave="onDropToBlock(event);" ondrop="onDropToBlock(event);"></iframe>`;
                             break;
 
                         case "video":
@@ -764,7 +827,7 @@ function createEditableContentFromArray(arr) {
                             if (block.muted) {
                                 videoMuted = " muted";
                             }
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><video${blockId}${blockClass} ${blockStyle} ${videoPoster}${videoAutoplay}${videoControls}${videoLoop}${videoMuted} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${videoMp4}${videoOgg}${videoWebm}Your browser does not support the video element.</video><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><video${blockId}${blockClass} ${blockStyle} ${videoPoster}${videoAutoplay}${videoControls}${videoLoop}${videoMuted} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondragover="onDropToBlock(event);" ondragleave="onDropToBlock(event);" ondrop="onDropToBlock(event);">${videoMp4}${videoOgg}${videoWebm}Your browser does not support the video element.</video>`;
                             break;
 
                         case "audio":
@@ -819,7 +882,7 @@ function createEditableContentFromArray(arr) {
                             if (block.muted) {
                                 audioMuted = " muted";
                             }
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><audio${blockId}${blockClass} ${blockStyle} ${audioAutoplay}${audioControls}${audioLoop}${audioMuted} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${audioMp3}${audioOgg}${audioWav}Your browser does not support the audio element.</audio>${audioMessage}<div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><audio${blockId}${blockClass} ${blockStyle} ${audioAutoplay}${audioControls}${audioLoop}${audioMuted} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondragover="onDropToBlock(event);" ondragleave="onDropToBlock(event);" ondrop="onDropToBlock(event);">${audioMp3}${audioOgg}${audioWav}Your browser does not support the audio element.</audio>${audioMessage}`;
                             break;
 
                         case "icon":
@@ -830,12 +893,12 @@ function createEditableContentFromArray(arr) {
                             blockClass = ` class="${block.category} ${block.class}"`;
 
                             if ( block.link ) {
-                                blockLinkStart = `<a href="${block.link}" ${blockTarget} class="sparky_icon_link" draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">`;
+                                blockLinkStart = `<a href="${block.link}" ${blockTarget} class="sparky_icon_link" draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondragover="onDropToBlock(event);" ondragleave="onDropToBlock(event);" ondrop="onDropToBlock(event);">`;
                                 blockLinkEnd = "</a>";
                             } else {
-                                blockDragndropIcon = 'draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);"';
+                                blockDragndropIcon = 'draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondragover="onDropToBlock(event);" ondragleave="onDropToBlock(event);" ondrop="onDropToBlock(event);"';
                             }
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div>${blockLinkStart}<i${blockId}${blockClass} ${blockStyle} aria-hidden="true" ${blockDragndropIcon}></i>${blockLinkEnd}<div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div>${blockLinkStart}<i${blockId}${blockClass} ${blockStyle} aria-hidden="true" ${blockDragndropIcon}></i>${blockLinkEnd}`;
                             break;
 
                         case "social":
@@ -854,15 +917,15 @@ function createEditableContentFromArray(arr) {
                             if (block.network6)
                                 social_network_html += `<a class="sparky_social_icon6" href="${block.link6}"${blockTarget} ><i class="fab fa-${block.network6}" aria-hidden="true"></i></a>`;
 
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><div${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${social_network_html}</div><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><div${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondragover="onDropToBlock(event);" ondragleave="onDropToBlock(event);" ondrop="onDropToBlock(event);">${social_network_html}</div>`;
                             break;
 
                         case "customhtml":
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><textarea${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${block.content}</textarea><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><textarea${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondragover="onDropToBlock(event);" ondragleave="onDropToBlock(event);" ondrop="onDropToBlock(event);">${block.content}</textarea>`;
                             break;
 
                         case "joomlamodule":
-                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><div${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondrop="onDropToBlock(event);">${block.content}</div><div data-blockdropzone="${dz}" class="block_dropzone" ondragover="onBlockDragOver(event);" ondragleave="onBlockDragLeave(event);" ondrop="onBlockDrop(event);"></div>`;
+                            sparkyHTML += `<div class="block_settings_buttons sparky_block${k}"><a class="block_settings" title="Block Settings"></a><a class="add_block_after_block" title="Add Block"></a><a class="copy_block" title="Copy Block"></a>${blockUp}${blockDown}<a class="delete_block" title="Delete Block"></a></div><div${blockId}${blockClass} ${blockStyle} draggable="true" ondragstart="onBlockDragStart(event);" ondragend="onBlockDragEnd(event);" ondragover="onDropToBlock(event);" ondragleave="onDropToBlock(event);" ondrop="onDropToBlock(event);">${block.content}</div>`;
                             break;
 
                         default:
@@ -883,14 +946,14 @@ function createEditableContentFromArray(arr) {
         i++;
 
         if ( row.id === "system-readmore" || row.class.includes("system-pagebreak") ) {
-            sparkyHTML += `</hr><div data-rowdropzone="${i}" class="row_dropzone" ondragover="onRowDragOver(event);" ondragleave="onRowDragLeave(event);" ondrop="onRowDrop(event);"></div>`;
+            sparkyHTML += `</hr>`;
         } else {
-            sparkyHTML += `<div class="column_dropzone" ondragover="onColumnDragOver(event);" ondragleave="onColumnDragLeave(event);" ondrop="onColumnDrop(event);"></div></div></div><div data-rowdropzone="${i}" class="row_dropzone" ondragover="onRowDragOver(event);" ondragleave="onRowDragLeave(event);" ondrop="onRowDrop(event);"></div>`;
+            sparkyHTML += `</div></div>`;
         }
 
     });
 
-    sparkyHTML += `<div id="add_sparky_row"><a title="Add Row">Add Row</a></div><div class="joomla_buttons_container"><div id="add_read_more"><a title="Read More Tag">Read More</a></div><div id="add_page_break"><a title="Page Break Tag">Page Break</a></div></div>`;
+    sparkyHTML += `<div class="sparky_bottom_actions"><div id="add_sparky_row"><a title="Add Row">Add Row</a></div><div class="joomla_buttons_container"><div id="add_read_more"><a title="Read More Tag">Read More</a></div><div id="add_page_break"><a title="Page Break Tag">Page Break</a></div></div></div>`;
 
     return sparkyHTML;
 
@@ -1181,6 +1244,60 @@ function sparkyEditorDraggableEditableEvents(){
 sparkyEditorDraggableEditableEvents();
 
 
+function rangeToHtml(contentRange) {
+    let contentContainer = document.createElement("div");
+    contentContainer.appendChild(contentRange.cloneContents());
+    return contentContainer.innerHTML;
+}
+
+function splitParagraphAtSelection(paragraphElement, selectionRange) {
+    let contentBeforeRange = document.createRange();
+    contentBeforeRange.selectNodeContents(paragraphElement);
+    contentBeforeRange.setEnd(selectionRange.startContainer, selectionRange.startOffset);
+
+    let contentAfterRange = document.createRange();
+    contentAfterRange.selectNodeContents(paragraphElement);
+    contentAfterRange.setStart(selectionRange.endContainer, selectionRange.endOffset);
+
+    return {
+        before: normalizeBoldTagsInHtml(rangeToHtml(contentBeforeRange)),
+        after: normalizeBoldTagsInHtml(rangeToHtml(contentAfterRange))
+    };
+}
+
+function queueParagraphFocus(rowPosition, columnPosition, blockPosition) {
+    pendingParagraphFocus = {
+        row: Number(rowPosition),
+        column: Number(columnPosition),
+        block: Number(blockPosition)
+    };
+}
+
+function applyPendingParagraphFocus() {
+    if (!pendingParagraphFocus) {
+        return;
+    }
+
+    const selector = ".sparky_row" + pendingParagraphFocus.row + " .sparky_col" + pendingParagraphFocus.column + " .sparky_block" + pendingParagraphFocus.block;
+    const blockSettings = sparkyPageContentEditable.querySelector(selector);
+    const paragraphElement = blockSettings ? blockSettings.nextSibling : null;
+
+    if (paragraphElement && paragraphElement.nodeName === "P") {
+        paragraphElement.focus();
+
+        let caretRange = document.createRange();
+        caretRange.selectNodeContents(paragraphElement);
+        caretRange.collapse(true);
+
+        let selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(caretRange);
+    }
+
+    pendingParagraphFocus = null;
+}
+
+
 // edit text in paragraph or heading
 
 sparkyPageContentEditable.addEventListener('input', function(event) {
@@ -1203,7 +1320,7 @@ sparkyPageContentEditable.addEventListener('input', function(event) {
     if (event.target.nodeName === "TEXTAREA") {
         sparkyPageContentArray[row].content[column].content[block].content = event.target.value;
     } else {
-        sparkyPageContentArray[row].content[column].content[block].content = event.target.innerHTML;
+        sparkyPageContentArray[row].content[column].content[block].content = normalizeBoldTagsInHtml(event.target.innerHTML);
     }
     
     // Update HTML in the textarea (can't use refreshSparky(), it blocks typing)
@@ -1212,6 +1329,47 @@ sparkyPageContentEditable.addEventListener('input', function(event) {
     // editable content changed - refresh events!
     //sparkyEditorButtonsEvents();
 
+});
+
+sparkyPageContentEditable.addEventListener('keydown', function(event) {
+    if (event.key !== "Enter" || event.shiftKey || event.target.nodeName !== "P") {
+        return;
+    }
+
+    let selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+        return;
+    }
+
+    let selectionRange = selection.getRangeAt(0);
+    if (!event.target.contains(selectionRange.startContainer) || !event.target.contains(selectionRange.endContainer)) {
+        return;
+    }
+
+    event.preventDefault();
+
+    // Find block position in array
+    let row = event.target.parentNode.parentNode.parentNode.className;
+    row = row.split("sparky_row")[row.split("sparky_row").length-1];
+
+    let column = event.target.parentNode.className;
+    column = column.split("sparky_col")[column.split("sparky_col").length-1];
+
+    let block = event.target.previousSibling.className;
+    block = block.split("sparky_block")[block.split("sparky_block").length-1];
+
+    let splitParagraphContent = splitParagraphAtSelection(event.target, selectionRange);
+    let currentParagraphBlock = sparkyPageContentArray[row].content[column].content[block];
+    let newParagraphBlock = JSON.parse(JSON.stringify(currentParagraphBlock));
+    newParagraphBlock.id = "";
+
+    currentParagraphBlock.content = splitParagraphContent.before;
+    newParagraphBlock.content = splitParagraphContent.after;
+
+    sparkyPageContentArray[row].content[column].content.splice(Number(block) + 1, 0, newParagraphBlock);
+
+    queueParagraphFocus(row, column, Number(block) + 1);
+    refreshSparky();
 });
 
 // on paste, convert clipboard content to text (except for custom HTML)
@@ -1236,7 +1394,7 @@ function sparkyEditorButtonsEvents() {
     // add row event
 
     document.getElementById("add_sparky_row").addEventListener("click", function() {
-
+        addRowInsertAfterPosition = null;
         sparky_modal( "add_row_modal" );
         
     });
@@ -1270,11 +1428,9 @@ function sparkyEditorButtonsEvents() {
 
     document.getElementById("add_page_break").addEventListener("click", function() {
 
-        let random_row_class = Math.floor((Math.random() * 100000000));
-
         // add page break tag as the last element to the array
         sparkyPageContentArray.push({
-            id: "row_" + random_row_class,
+            id: generateRandomRowId(),
             class: "system-pagebreak",
             title: "Page Break Title",
             alias: "Table of Contents Alias",
@@ -1325,15 +1481,25 @@ function sparkyEditorButtonsEvents() {
             // row must be copied this way, otherwise it will be just a "reference"
             let newRow = JSON.parse(JSON.stringify(copiedRow));
 
-            // generate random class
-            let random_row_class = Math.floor((Math.random() * 100000000));
-            newRow.id = "row_" + random_row_class;
+            // generate random row id
+            newRow.id = generateRandomRowId();
 
             // add copied row to array
             sparkyPageContentArray.splice(sparkyRowPosition, 0, newRow);
 
             refreshSparky();
 
+        });
+
+    });
+
+    // add row below event
+    let addRowAfterEditorButtons = document.getElementsByClassName("add_row_after");
+    Array.from(addRowAfterEditorButtons).forEach(function(button) {
+
+        button.addEventListener("click", function(event) {
+            addRowInsertAfterPosition = Number(determineRowPosition(event.target.parentNode.nextSibling.className));
+            sparky_modal( "add_row_modal" );
         });
 
     });
@@ -1348,6 +1514,7 @@ function sparkyEditorButtonsEvents() {
             let sparkyRowPosition = Number(determineRowPosition(event.composedPath()[1].nextSibling.className));
 
             if ( sparkyRowPosition - 1 >= 0 ) {
+                queueRowControlScroll(sparkyRowPosition - 1, "row_up", event.clientY);
                 sparkyPageContentArray = moveArrayItemToNewIndex(sparkyPageContentArray, sparkyRowPosition, sparkyRowPosition - 1);
                 refreshSparky();
             }
@@ -1366,6 +1533,7 @@ function sparkyEditorButtonsEvents() {
             let sparkyRowPosition = Number(determineRowPosition(event.composedPath()[1].nextSibling.className));
 
             if ( sparkyPageContentArray.length - 1 > sparkyRowPosition ) {
+                queueRowControlScroll(sparkyRowPosition + 1, "row_down", event.clientY);
                 sparkyPageContentArray = moveArrayItemToNewIndex(sparkyPageContentArray, sparkyRowPosition, sparkyRowPosition + 1);
                 refreshSparky();
             }
@@ -1571,6 +1739,15 @@ function sparkyEditorButtonsEvents() {
 
     });
 
+    let addBlockAfterBlockButtons = document.getElementsByClassName("add_block_after_block");
+    Array.from(addBlockAfterBlockButtons).forEach(function(button) {
+
+        button.addEventListener("click", function(event) {
+            sparky_modal( "add_block_modal" );
+        });
+
+    });
+
     // block settings event
 
     let blockSettingsEditorButtons = document.getElementsByClassName("block_settings");
@@ -1614,28 +1791,72 @@ function sparkyEditorButtonsEvents() {
     });
 
 
+    function isValidInlineTextSelection(selection, targetBlock) {
+        const anchorNode = selection ? (selection.anchorNode || selection.baseNode) : null;
+        const focusNode = selection ? (selection.focusNode || selection.extentNode) : null;
+
+        if (!selection || !anchorNode || !focusNode || !targetBlock) {
+            return false;
+        }
+
+        if (selection.type !== "Range" || selection.rangeCount === 0) {
+            return false;
+        }
+
+        if (!selection.toString().trim()) {
+            return false;
+        }
+
+        return targetBlock.contains(anchorNode) && targetBlock.contains(focusNode);
+    }
+
+    function applyInlineTextCommand(buttonClassName, command) {
+        let commandButtons = document.getElementsByClassName(buttonClassName);
+
+        Array.from(commandButtons).forEach(function(button) {
+            button.addEventListener("click", function(event) {
+                let selection = window.getSelection();
+                let targetBlock = event.target.parentNode.nextSibling;
+
+                if (!isValidInlineTextSelection(selection, targetBlock)) {
+                    alert("Please select a part of the text first.");
+                    return;
+                }
+
+                document.execCommand(command, false, null);
+                targetBlock.dispatchEvent(new Event("input", { bubbles: true }));
+            });
+        });
+    }
+
+    function isHeadingTag(nodeName) {
+        return [ "H1", "H2", "H3", "H4", "H5", "H6" ].includes(nodeName);
+    }
+
     // add link to paragraph event
 
     let addParagraphLinkButtons = document.getElementsByClassName("add_paragraph_link");
     Array.from(addParagraphLinkButtons).forEach(function(button) {
 
         button.addEventListener("click", function(event) {
+            const selection = window.getSelection();
+            const anchorNode = selection ? (selection.anchorNode || selection.baseNode) : null;
 
-            if ( window.getSelection().baseNode ) {
+            if (anchorNode) {
                 // check if selection is inside existing link, and existing link is in paragraph or list item
-                if ( window.getSelection().baseNode.parentNode.nodeName === "A" ) {
-                    if (window.getSelection().baseNode.parentNode.parentNode.nodeName === "P" || window.getSelection().baseNode.parentNode.parentNode.nodeName === "LI") {
+                if ( anchorNode.parentNode.nodeName === "A" ) {
+                    if (anchorNode.parentNode.parentNode.nodeName === "P" || anchorNode.parentNode.parentNode.nodeName === "LI") {
                         sparky_modal( "add_link_modal" );
                     }
                 } else {
                     // open modal if some text is selected
-                    if ( window.getSelection().type === "Range" ) {
+                    if ( selection.type === "Range" && selection.rangeCount > 0 ) {
                         // check if selected text is inside this paragraph (first case)
                         // or inside list item (second case)
                         if (
-                            window.getSelection().baseNode.parentNode === event.target.parentNode.nextSibling
+                            anchorNode.parentNode === event.target.parentNode.nextSibling
                             ||
-                            window.getSelection().baseNode.parentNode.parentNode === event.target.parentNode.nextSibling
+                            anchorNode.parentNode.parentNode === event.target.parentNode.nextSibling
                         ) {
                             sparky_modal( "add_link_modal" );
                         }
@@ -1650,6 +1871,53 @@ function sparkyEditorButtonsEvents() {
         });
 
     });
+
+    // add link to heading event
+    let addHeadingLinkButtons = document.getElementsByClassName("add_heading_link");
+    Array.from(addHeadingLinkButtons).forEach(function(button) {
+
+        button.addEventListener("click", function(event) {
+            const selection = window.getSelection();
+            const anchorNode = selection ? (selection.anchorNode || selection.baseNode) : null;
+
+            if (event.target.className.includes("heading_link_disabled")) {
+                alert("Link icon is disabled while the Heading Settings link is in use.");
+                return;
+            }
+
+            if (anchorNode) {
+                // check if selection is inside existing link and existing link is in heading
+                if ( anchorNode.parentNode.nodeName === "A" ) {
+                    if (isHeadingTag(anchorNode.parentNode.parentNode.nodeName)) {
+                        sparky_modal( "add_link_modal" );
+                    }
+                } else {
+                    // open modal if some text is selected
+                    if ( selection.type === "Range" && selection.rangeCount > 0 ) {
+                        if (
+                            anchorNode.parentNode === event.target.parentNode.nextSibling
+                            ||
+                            anchorNode.parentNode.parentNode === event.target.parentNode.nextSibling
+                        ) {
+                            sparky_modal( "add_link_modal" );
+                        }
+                    } else {
+                        alert("Please select two or more characters of text where you want to add a link.")
+                    }
+                }
+            } else {
+                alert("Please select a part of the text first.")
+            }
+        });
+
+    });
+
+    applyInlineTextCommand("add_paragraph_bold", "bold");
+    applyInlineTextCommand("add_paragraph_italic", "italic");
+    applyInlineTextCommand("add_paragraph_underline", "underline");
+    applyInlineTextCommand("add_heading_bold", "bold");
+    applyInlineTextCommand("add_heading_italic", "italic");
+    applyInlineTextCommand("add_heading_underline", "underline");
 
     // copy block event
 
@@ -1691,6 +1959,7 @@ function sparkyEditorButtonsEvents() {
             let sparkyBlockPosition = determineBlockPosition([event.composedPath()[4].className, event.composedPath()[2].className, event.composedPath()[1].className] );
 
             if ( Number(sparkyBlockPosition[2]) > 0 ) {
+                queueBlockControlScroll(sparkyBlockPosition[0], sparkyBlockPosition[1], Number(sparkyBlockPosition[2]) - 1, "block_up", event.clientY);
                 moveArrayItemToNewIndex(sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content, Number(sparkyBlockPosition[2]), Number(sparkyBlockPosition[2]) - 1);
                 refreshSparky();
             }
@@ -1712,6 +1981,7 @@ function sparkyEditorButtonsEvents() {
             let sparkyBlockPosition = determineBlockPosition([event.composedPath()[4].className, event.composedPath()[2].className, event.composedPath()[1].className] );
 
             if ( sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.length - 1 > Number(sparkyBlockPosition[2]) ) {
+                queueBlockControlScroll(sparkyBlockPosition[0], sparkyBlockPosition[1], Number(sparkyBlockPosition[2]) + 1, "block_down", event.clientY);
                 moveArrayItemToNewIndex(sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content, Number(sparkyBlockPosition[2]), Number(sparkyBlockPosition[2]) + 1);
                 refreshSparky();
             }
@@ -1747,34 +2017,73 @@ function sparkyEditorButtonsEvents() {
 
 }
 sparkyEditorButtonsEvents();
+initSparkyUndoRedoToolbarButtons();
+recordSparkyHistoryState();
 
 
 
 
 //// VII drag and drop
 
+let currentDragType = "";
+let activeRowDropIndicator = null;
+let activeRowDropIndicatorPosition = "";
+
+function clearRowDropIndicator() {
+    if (!activeRowDropIndicator) {
+        return;
+    }
+    activeRowDropIndicator.classList.remove("sparky_row_drop_target_before", "sparky_row_drop_target_after");
+    activeRowDropIndicator = null;
+    activeRowDropIndicatorPosition = "";
+}
+
+function setRowDropIndicator(targetElement, insertAfterTarget) {
+    if (!targetElement) {
+        clearRowDropIndicator();
+        return;
+    }
+    const nextPosition = insertAfterTarget ? "after" : "before";
+    if (activeRowDropIndicator === targetElement && activeRowDropIndicatorPosition === nextPosition) {
+        return;
+    }
+
+    clearRowDropIndicator();
+    activeRowDropIndicator = targetElement;
+    activeRowDropIndicatorPosition = nextPosition;
+    activeRowDropIndicator.classList.add(insertAfterTarget ? "sparky_row_drop_target_after" : "sparky_row_drop_target_before");
+}
+
+function isRowDragEvent(event) {
+    return currentDragType === "row";
+}
+
+function isColumnDragEvent(event) {
+    return currentDragType === "column";
+}
+
 
 // drag and drop rows
 
 function onRowDragStart(event) {
-
-    // display row drop zones
-    if ( event.target.className.includes("sparky_page_row") || event.target.id === "system-readmore" || event.target.className.includes("system-pagebreak") ) {
-        rowDropZones(true, event.currentTarget);
+    if (event.currentTarget !== event.target) {
+        return;
     }
 
-    event.dataTransfer.setData('text/plain', event.target.id);
+    currentDragType = "row";
+    clearColumnDropIndicator();
+    clearBlockDropIndicator();
+    event.dataTransfer.setData('text/plain', event.currentTarget.id);
     event.currentTarget.style.borderColor = 'red';
 
 }
 
 function onRowDragEnd(event){
-
-    // deactivate row drop zones
-    if ( event.target.className.includes("sparky_page_row") || event.target.id === "system-readmore" || event.target.className.includes("system-pagebreak") ) {
-        rowDropZones(false, event.currentTarget);
+    if (event.currentTarget !== event.target) {
+        return;
     }
-
+    currentDragType = "";
+    clearRowDropIndicator();
     event.currentTarget.style.borderColor = '#ccc';
     //event.dataTransfer.clearData();
 
@@ -1782,21 +2091,29 @@ function onRowDragEnd(event){
 
 function onRowDragOver(event) {
 
+    if (!isRowDragEvent(event)) {
+        return;
+    }
     event.preventDefault();
-    event.currentTarget.style.backgroundColor = '#2f7d32';
+    const targetRect = event.currentTarget.getBoundingClientRect();
+    const insertAfterTarget = event.clientY > (targetRect.top + targetRect.height / 2);
+    setRowDropIndicator(event.currentTarget, insertAfterTarget);
 
 }
 
 function onRowDragLeave(event) {
 
+    if (!isRowDragEvent(event)) {
+        return;
+    }
     event.preventDefault();
-    event.currentTarget.style.backgroundColor = '#98c29a';
 
 }
 
 function onRowDrop(event) {
 
     event.preventDefault();
+    clearRowDropIndicator();
 
     // check if dragged element is a row (if row id starts with "row_")
     if ( event.dataTransfer.getData('text').startsWith("row_") || event.dataTransfer.getData('text') === "system-readmore" ) {
@@ -1804,38 +2121,21 @@ function onRowDrop(event) {
         // row id that we are dragging
         const id = event.dataTransfer.getData('text');
 
-        // row that we drag
-        const draggableRowElement = document.getElementById(id);
-        // row settings of the row that we drag
-        const draggableRowElementSettings = draggableRowElement.previousSibling;
-        // dropzone of the row that we drag
-        const draggableRowElementDropzone = draggableRowElement.previousSibling.previousSibling;
+        const targetRowClass = event.currentTarget.className;
+        let oldRowPosition = determineRowPosition(document.getElementById(id).className);
+        let newRowPosition = determineRowPosition(targetRowClass);
 
-        // where we are dropping
-        const dropzone = event.target;
-
-        // drop row's dropzone
-        dropzone.parentNode.insertBefore(draggableRowElementDropzone, dropzone.nextSibling)
-        // drop row 
-        dropzone.parentNode.insertBefore(draggableRowElement, dropzone.nextSibling)
-        // drop row's settings
-        dropzone.parentNode.insertBefore(draggableRowElementSettings, dropzone.nextSibling)
-        
-        // deactivate row drop zones
-        rowDropZones(false, dropzone);
-
-        // update sparkyPageContentArray
-        
-        let oldRowPosition = determineRowPosition(draggableRowElement.className);
-        let rowPositionChange = dropzone.dataset.rowdropzone - oldRowPosition;
-
-        // because dropzone is before row, we reduce for 1 if moving row down
-        if (rowPositionChange > 0) {
-            rowPositionChange--;
+        const targetRect = event.currentTarget.getBoundingClientRect();
+        if (event.clientY > (targetRect.top + targetRect.height / 2)) {
+            newRowPosition++;
+        }
+        if (newRowPosition > oldRowPosition) {
+            newRowPosition--;
         }
 
-        sparkyPageContentArray = moveArrayItemToNewIndex(sparkyPageContentArray, oldRowPosition, Number(oldRowPosition) + Number(rowPositionChange));
+        sparkyPageContentArray = moveArrayItemToNewIndex(sparkyPageContentArray, oldRowPosition, newRowPosition);
 
+        currentDragType = "";
         refreshSparky();
 
     }
@@ -1847,49 +2147,89 @@ function onRowDrop(event) {
 // drag and drop columns
 
 let draggedColumn;
+let activeColumnDropIndicator = null;
+let activeColumnDropIndicatorPosition = "";
+
+function clearColumnDropIndicator() {
+    if (!activeColumnDropIndicator) {
+        return;
+    }
+    activeColumnDropIndicator.classList.remove("sparky_column_drop_target_before", "sparky_column_drop_target_after");
+    activeColumnDropIndicator = null;
+    activeColumnDropIndicatorPosition = "";
+}
+
+function setColumnDropIndicator(targetElement, insertAfterTarget) {
+    if (!targetElement) {
+        clearColumnDropIndicator();
+        return;
+    }
+
+    const nextPosition = insertAfterTarget ? "after" : "before";
+    if (activeColumnDropIndicator === targetElement && activeColumnDropIndicatorPosition === nextPosition) {
+        return;
+    }
+
+    clearColumnDropIndicator();
+    activeColumnDropIndicator = targetElement;
+    activeColumnDropIndicatorPosition = nextPosition;
+    activeColumnDropIndicator.classList.add(insertAfterTarget ? "sparky_column_drop_target_after" : "sparky_column_drop_target_before");
+}
 
 function onColumnDragStart(event) {
+    if (event.currentTarget !== event.target) {
+        return;
+    }
+    event.stopPropagation();
 
-    // display column drop zones
-    columnDropZones(true, event.target);
-
+    currentDragType = "column";
     draggedColumn = event.currentTarget;
+    clearBlockDropIndicator();
 
-    event.dataTransfer.setData("column", event.target.outerHTML);
-    event.dataTransfer.setData("parent_row", event.target.parentNode.parentNode.id);
-    event.dataTransfer.setData("parent_row_class", event.target.parentNode.parentNode.className);
-    event.dataTransfer.setData("column_class", event.target.className);
+    event.dataTransfer.setData("column", event.currentTarget.outerHTML);
+    event.dataTransfer.setData("parent_row", event.currentTarget.parentNode.parentNode.id);
+    event.dataTransfer.setData("parent_row_class", event.currentTarget.parentNode.parentNode.className);
+    event.dataTransfer.setData("column_class", event.currentTarget.className);
     event.currentTarget.style.borderColor = 'red';
 
 }
 
 function onColumnDragEnd(event){
-
-    // deactivate row drop zones
-    columnDropZones(false, event.currentTarget);
-
+    if (event.currentTarget !== event.target) {
+        return;
+    }
+    currentDragType = "";
     event.currentTarget.style.borderColor = '#ccc';
+    clearColumnDropIndicator();
     //event.dataTransfer.clearData();
 
 }
 
 function onColumnDragOver(event) {
 
+    if (!isColumnDragEvent(event)) {
+        return;
+    }
     event.preventDefault();
-    event.currentTarget.style.backgroundColor = '#2f7d32';
+    const targetRect = event.currentTarget.getBoundingClientRect();
+    const insertAfterTarget = event.clientX > (targetRect.left + targetRect.width / 2);
+    setColumnDropIndicator(event.currentTarget, insertAfterTarget);
 
 }
 
 function onColumnDragLeave(event) {
 
+    if (!isColumnDragEvent(event)) {
+        return;
+    }
     event.preventDefault();
-    event.currentTarget.style.backgroundColor = '#98c29a';
 
 }
 
 function onColumnDrop(event) {
 
     event.preventDefault();
+    clearColumnDropIndicator();
 
     // prevent dropping columns to other rows
     if ( event.currentTarget.parentNode.parentNode.id !== event.dataTransfer.getData("parent_row") ) {
@@ -1906,17 +2246,14 @@ function onColumnDrop(event) {
     let columnPos = event.dataTransfer.getData("column_class");
     columnPos = columnPos.split("sparky_col")[columnPos.split("sparky_col").length-1];
 
-    let columnNewPos;
-
-    if (event.target.nextSibling) {
-        columnNewPos = event.target.nextSibling.className;
-    } else {
-        columnNewPos = event.target.previousSibling.className;
-    }
-
+    let columnNewPos = event.currentTarget.className;
     columnNewPos = columnNewPos.split("sparky_col")[columnNewPos.split("sparky_col").length-1];
 
-    if (columnNewPos > columnPos && event.target.nextSibling) {
+    const targetRect = event.currentTarget.getBoundingClientRect();
+    if (event.clientX > (targetRect.left + targetRect.width / 2)) {
+        columnNewPos++;
+    }
+    if (columnNewPos > columnPos) {
         columnNewPos--;
     }
 
@@ -1925,6 +2262,7 @@ function onColumnDrop(event) {
 
     //event.dataTransfer.clearData();
 
+    currentDragType = "";
     refreshSparky();
 
 }
@@ -1934,24 +2272,112 @@ function onColumnDrop(event) {
 
 let draggedBlock;
 let draggedBlockSettings;
+let activeBlockDropIndicator = null;
+let activeBlockDropIndicatorPosition = "";
 
-// just prevent dropping to blocks
+function clearBlockDropIndicator() {
+    if (!activeBlockDropIndicator) {
+        return;
+    }
+    activeBlockDropIndicator.classList.remove("sparky_block_drop_target_before", "sparky_block_drop_target_after");
+    activeBlockDropIndicator = null;
+    activeBlockDropIndicatorPosition = "";
+}
+
+function setBlockDropIndicator(targetElement, insertAfterTarget) {
+    if (!targetElement) {
+        clearBlockDropIndicator();
+        return;
+    }
+
+    const nextPosition = insertAfterTarget ? "after" : "before";
+    if (activeBlockDropIndicator === targetElement && activeBlockDropIndicatorPosition === nextPosition) {
+        return;
+    }
+
+    clearBlockDropIndicator();
+    activeBlockDropIndicator = targetElement;
+    activeBlockDropIndicatorPosition = nextPosition;
+    activeBlockDropIndicator.classList.add(insertAfterTarget ? "sparky_block_drop_target_after" : "sparky_block_drop_target_before");
+}
+
 function onDropToBlock(event) {
+    event.stopPropagation();
+
+    if (event.type === "dragover") {
+        event.preventDefault();
+        if (!draggedBlock || event.currentTarget === draggedBlock) {
+            clearBlockDropIndicator();
+            return;
+        }
+        const targetRect = event.currentTarget.getBoundingClientRect();
+        const insertAfterTarget = event.clientY > (targetRect.top + targetRect.height / 2);
+        setBlockDropIndicator(event.currentTarget, insertAfterTarget);
+        return;
+    }
+
+    if (event.type === "dragleave") {
+        event.preventDefault();
+        return;
+    }
+
     event.preventDefault();
+    clearBlockDropIndicator();
+
+    let startingRow = event.dataTransfer.getData("block_parent_row");
+    startingRow = startingRow.split("sparky_row")[startingRow.split("sparky_row").length-1];
+
+    let startingColumn = event.dataTransfer.getData("block_parent_column");
+    startingColumn = startingColumn.split("sparky_col")[startingColumn.split("sparky_col").length-1];
+
+    let startingBlock = event.dataTransfer.getData("block_position");
+    startingBlock = startingBlock.split("sparky_block")[startingBlock.split("sparky_block").length-1];
+
+    let targetRow = event.currentTarget.parentNode.parentNode.parentNode.className;
+    targetRow = targetRow.split("sparky_row")[targetRow.split("sparky_row").length-1];
+
+    let targetColumn = event.currentTarget.parentNode.className;
+    targetColumn = targetColumn.split("sparky_col")[targetColumn.split("sparky_col").length-1];
+
+    let targetBlock = event.currentTarget.previousSibling.className;
+    targetBlock = targetBlock.split("sparky_block")[targetBlock.split("sparky_block").length-1];
+
+    const targetRect = event.currentTarget.getBoundingClientRect();
+    const insertAfterTarget = event.clientY > (targetRect.top + targetRect.height / 2);
+    let targetIndex = Number(targetBlock) + (insertAfterTarget ? 1 : 0);
+
+    let blockToInsert = sparkyPageContentArray[startingRow].content[startingColumn].content[startingBlock];
+    let whereToInsert = sparkyPageContentArray[targetRow].content[targetColumn].content;
+    whereToInsert.splice(targetIndex, 0, blockToInsert);
+
+    let whereToRemove = sparkyPageContentArray[startingRow].content[startingColumn].content;
+    if (whereToInsert === whereToRemove && Number(startingBlock) >= targetIndex) {
+        startingBlock++;
+    }
+    whereToRemove.splice(startingBlock, 1);
+
+    currentDragType = "";
+    refreshSparky();
 }
 
 function onBlockDragStart(event) {
+    if (event.currentTarget !== event.target) {
+        return;
+    }
+    event.stopPropagation();
 
+    currentDragType = "block";
     // display block drop zones
     blockDropZones(true, event.currentTarget);
 
     draggedBlock = event.currentTarget;
     draggedBlockSettings = event.currentTarget.previousSibling;
+    clearColumnDropIndicator();
 
-    event.dataTransfer.setData("block_parent_row", event.target.parentNode.parentNode.parentNode.className);
-    event.dataTransfer.setData("block_parent_column", event.target.parentNode.className);
-    event.dataTransfer.setData("block_position", event.target.previousSibling.className);
-    event.dataTransfer.setData("block", event.target.previousSibling.outerHTML + event.target.outerHTML);
+    event.dataTransfer.setData("block_parent_row", event.currentTarget.parentNode.parentNode.parentNode.className);
+    event.dataTransfer.setData("block_parent_column", event.currentTarget.parentNode.className);
+    event.dataTransfer.setData("block_position", event.currentTarget.previousSibling.className);
+    event.dataTransfer.setData("block", event.currentTarget.previousSibling.outerHTML + event.currentTarget.outerHTML);
     event.currentTarget.style.borderColor = 'red';
 
 }
@@ -1963,9 +2389,15 @@ function onImageDragStart(event) {
 }
 
 function onBlockDragEnd(event){
+    if (event.currentTarget !== event.target) {
+        return;
+    }
 
     // deactivate row drop zones
     blockDropZones(false, event.currentTarget);
+    clearBlockDropIndicator();
+    draggedBlock = null;
+    currentDragType = "";
 
     event.currentTarget.style.borderColor = '#ccc';
     //event.dataTransfer.clearData();
@@ -1975,14 +2407,19 @@ function onBlockDragEnd(event){
 function onBlockDragOver(event) {
 
     event.preventDefault();
-    event.currentTarget.style.backgroundColor = '#2f7d32';
+    if (!draggedBlock || event.currentTarget === draggedBlock) {
+        clearBlockDropIndicator();
+        return;
+    }
+    const targetRect = event.currentTarget.getBoundingClientRect();
+    const insertAfterTarget = event.clientY > (targetRect.top + targetRect.height / 2);
+    setBlockDropIndicator(event.currentTarget, insertAfterTarget);
 
 }
 
 function onBlockDragLeave(event) {
 
     event.preventDefault();
-    event.currentTarget.style.backgroundColor = '#98c29a';
 
 }
 
@@ -2040,6 +2477,144 @@ function onBlockDrop(event) {
 
 //// VIII functions
 
+function sparkySerializeState() {
+    return JSON.stringify(sparkyPageContentArray);
+}
+
+function updateSparkyHistoryButtons() {
+    const undoButton = document.getElementById("sparkyUndoButton");
+    const redoButton = document.getElementById("sparkyRedoButton");
+
+    if (undoButton) {
+        undoButton.disabled = sparkyHistoryIndex <= 0;
+    }
+    if (redoButton) {
+        redoButton.disabled = sparkyHistoryIndex >= sparkyHistory.length - 1;
+    }
+}
+
+function recordSparkyHistoryState() {
+    if (isApplyingHistoryState) {
+        return;
+    }
+
+    const currentState = sparkySerializeState();
+    if (sparkyHistoryIndex >= 0 && sparkyHistory[sparkyHistoryIndex] === currentState) {
+        updateSparkyHistoryButtons();
+        return;
+    }
+
+    sparkyHistory = sparkyHistory.slice(0, sparkyHistoryIndex + 1);
+    sparkyHistory.push(currentState);
+    sparkyHistoryIndex = sparkyHistory.length - 1;
+    updateSparkyHistoryButtons();
+}
+
+function applySparkyHistoryState() {
+    isApplyingHistoryState = true;
+    sparkyPageContentArray = JSON.parse(sparkyHistory[sparkyHistoryIndex]);
+    refreshSparky();
+    isApplyingHistoryState = false;
+    updateSparkyHistoryButtons();
+}
+
+function sparkyUndoAction() {
+    if (sparkyHistoryIndex <= 0) {
+        return;
+    }
+    sparkyHistoryIndex--;
+    applySparkyHistoryState();
+}
+
+function sparkyRedoAction() {
+    if (sparkyHistoryIndex >= sparkyHistory.length - 1) {
+        return;
+    }
+    sparkyHistoryIndex++;
+    applySparkyHistoryState();
+}
+
+function initSparkyUndoRedoToolbarButtons() {
+    const toolbar = document.getElementById("toolbar");
+    if (!toolbar || document.getElementById("sparkyUndoButton")) {
+        return;
+    }
+
+    const undoRedoGroup = document.createElement("div");
+    undoRedoGroup.className = "btn-group";
+
+    const undoButton = document.createElement("button");
+    undoButton.type = "button";
+    undoButton.id = "sparkyUndoButton";
+    undoButton.className = "btn btn-sm btn-secondary";
+    undoButton.innerHTML = '<span class="icon-undo" aria-hidden="true"></span> Undo';
+    undoButton.addEventListener("click", sparkyUndoAction);
+
+    const redoButton = document.createElement("button");
+    redoButton.type = "button";
+    redoButton.id = "sparkyRedoButton";
+    redoButton.className = "btn btn-sm btn-secondary";
+    redoButton.innerHTML = '<span class="icon-redo" aria-hidden="true"></span> Redo';
+    redoButton.addEventListener("click", sparkyRedoAction);
+
+    undoRedoGroup.appendChild(undoButton);
+    undoRedoGroup.appendChild(redoButton);
+    toolbar.appendChild(undoRedoGroup);
+
+    updateSparkyHistoryButtons();
+}
+
+function queueBlockControlScroll(rowPosition, columnPosition, blockPosition, controlClassName, clientY) {
+    pendingBlockControlScroll = {
+        row: Number(rowPosition),
+        column: Number(columnPosition),
+        block: Number(blockPosition),
+        controlClassName: controlClassName,
+        clientY: clientY
+    };
+}
+
+function queueRowControlScroll(rowPosition, controlClassName, clientY) {
+    pendingRowControlScroll = {
+        row: Number(rowPosition),
+        controlClassName: controlClassName,
+        clientY: clientY
+    };
+}
+
+function applyPendingRowControlScroll() {
+    if (!pendingRowControlScroll) {
+        return;
+    }
+
+    const rowElement = sparkyPageContentEditable.querySelector(".sparky_row" + pendingRowControlScroll.row);
+    const rowSettings = rowElement ? rowElement.previousSibling : null;
+    const rowControlButton = rowSettings ? rowSettings.querySelector("." + pendingRowControlScroll.controlClassName) : null;
+
+    if (rowControlButton) {
+        const buttonPosition = rowControlButton.getBoundingClientRect();
+        window.scrollBy(0, buttonPosition.top - pendingRowControlScroll.clientY);
+    }
+
+    pendingRowControlScroll = null;
+}
+
+function applyPendingBlockControlScroll() {
+    if (!pendingBlockControlScroll) {
+        return;
+    }
+
+    const selector = ".sparky_row" + pendingBlockControlScroll.row + " .sparky_col" + pendingBlockControlScroll.column + " .sparky_block" + pendingBlockControlScroll.block + " ." + pendingBlockControlScroll.controlClassName;
+    const blockControlButton = sparkyPageContentEditable.querySelector(selector);
+
+    if (blockControlButton) {
+        const buttonPosition = blockControlButton.getBoundingClientRect();
+        window.scrollBy(0, buttonPosition.top - pendingBlockControlScroll.clientY);
+    }
+
+    pendingBlockControlScroll = null;
+}
+
 
 
 function refreshSparky() {
@@ -2053,6 +2628,11 @@ function refreshSparky() {
 
     // refresh draggable elements (fix for firefox bug)
     sparkyEditorDraggableEditableEvents();
+
+    applyPendingParagraphFocus();
+    applyPendingRowControlScroll();
+    applyPendingBlockControlScroll();
+    recordSparkyHistoryState();
 
     console.log(sparkyPageContentArray)
 
@@ -2245,9 +2825,15 @@ function rowDropZones(bool, row) {
             // don't activate dropzone just before/after the row (unnecessary)
             if (zone !== row.previousSibling.previousSibling && zone !== row.nextSibling) {
                 zone.style.opacity = 1;
+                zone.style.height = "30px";
+                zone.style.margin = "10px 0";
+                zone.style.pointerEvents = "auto";
             }
         } else {
             zone.style.opacity = 0;
+            zone.style.height = "0";
+            zone.style.margin = "0";
+            zone.style.pointerEvents = "none";
         }
 
     });
@@ -2272,9 +2858,15 @@ function columnDropZones(bool, column) {
                 zone.parentNode === column.parentNode
                 ) {
                 zone.style.opacity = 1;
+                zone.style.width = "10px";
+                zone.style.margin = "10px 5px";
+                zone.style.pointerEvents = "auto";
             }
         } else {
             zone.style.opacity = 0;
+            zone.style.width = "0";
+            zone.style.margin = "0";
+            zone.style.pointerEvents = "none";
         }
 
     });
@@ -2292,9 +2884,15 @@ function blockDropZones(bool, block) {
             // don't activate dropzone just before/after the block (unnecessary)
             if (zone !== block.previousSibling.previousSibling && zone !== block.nextSibling) {
                 zone.style.opacity = 1;
+                zone.style.height = "10px";
+                zone.style.margin = "10px";
+                zone.style.pointerEvents = "auto";
             }
         } else {
             zone.style.opacity = 0;
+            zone.style.height = "0";
+            zone.style.margin = "0";
+            zone.style.pointerEvents = "none";
         }
 
     });
@@ -2511,11 +3109,11 @@ function sparky_modal(modal_type) {
 
         modal.style.display = "block";
 
-        // generate random classes
-        let random_row_class = Math.floor((Math.random() * 100000000));
-
         // new row position (.sparky_rowX)
         let new_row_position = sparkyPageContentArray.length;
+        if (addRowInsertAfterPosition !== null) {
+            new_row_position = addRowInsertAfterPosition + 1;
+        }
 
         // array with possible row layouts
         let row_layouts = [ "12", "6_6", "4_4_4", "3_3_3_3", "2_2_2_2_2_2", "8_4", "4_8", "9_3", "3_9" ];
@@ -2527,8 +3125,8 @@ function sparky_modal(modal_type) {
                 let columns = layout.split("_");
 
                 // add row to the sparky object
-                sparkyPageContentArray.push({
-                    id: "row_" + random_row_class,
+                sparkyPageContentArray.splice(new_row_position, 0, {
+                    id: generateRandomRowId(),
                     class: "sparky_page_row sparky_row" + new_row_position,
                     style: {},
                     content: []
@@ -2537,7 +3135,7 @@ function sparky_modal(modal_type) {
                 // add columns to the new row
                 let i = 0;
                 columns.forEach(function(cells){
-                    sparkyPageContentArray[sparkyPageContentArray.length - 1].content.push({
+                    sparkyPageContentArray[new_row_position].content.push({
                         id: "",
                         class: "sparkle" + cells + " sparky_cell sparky_col" + i,
                         style: {},
@@ -2549,6 +3147,7 @@ function sparky_modal(modal_type) {
                 });
 
                 modal.style.display = "none";
+                addRowInsertAfterPosition = null;
                 refreshSparky();
             }
 
@@ -2695,7 +3294,8 @@ function sparky_modal(modal_type) {
             event.preventDefault();
 
             // row id
-            sparkyPageContentArray[sparkyRowPosition].id = document.getElementById("row_id").value;
+            let rowIdInput = document.getElementById("row_id").value.trim();
+            sparkyPageContentArray[sparkyRowPosition].id = rowIdInput || generateRandomRowId();
 
             // row class ("sparky_rowX" must be last)
             sparkyPageContentArray[sparkyRowPosition].class = document.getElementById("row_class").value + " sparky_page_row sparky_row" + sparkyRowPosition;
@@ -2962,27 +3562,33 @@ function sparky_modal(modal_type) {
         // event.composedPath()[4].className -> row position (.sparky_rowX)
         // event.composedPath()[2].className -> col position (.sparky_colX)
         let sparkyBlockPosition = determineBlockPosition([event.composedPath()[4].className, event.composedPath()[2].className], false);
+        let insertPosition = sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.length;
+
+        if (event.target.className.includes("add_block_after_block")) {
+            let clickedBlockPosition = determineBlockPosition([event.composedPath()[4].className, event.composedPath()[2].className, event.composedPath()[1].className]);
+            insertPosition = Number(clickedBlockPosition[2]) + 1;
+        }
+
+        function addNewBlockToColumn(newBlock) {
+            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.splice(insertPosition, 0, newBlock);
+            modal.style.display = "none";
+            refreshSparky();
+        }
 
         // add paragraph block
         document.getElementById("sparky_block_paragraph").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "",
                 style: {},
                 type: "paragraph",
                 content: "Add some text..."
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add heading block
         document.getElementById("sparky_block_heading").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "",
                 style: {},
@@ -2992,16 +3598,11 @@ function sparky_modal(modal_type) {
                 target: false,
                 content: "Sample Heading"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add image block
         document.getElementById("sparky_block_image").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "",
                 style: {},
@@ -3011,48 +3612,33 @@ function sparky_modal(modal_type) {
                 src: "media/plg_editors_sparky/images/image.png",
                 alt: ""
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add separator block
         document.getElementById("sparky_block_separator").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "",
                 style: {height: "3px"},
                 link: "",
                 type: "separator"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add spacer block
         document.getElementById("sparky_block_spacer").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "sparky_spacer",
                 style: {},
                 link: "",
                 type: "spacer"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add button block
         document.getElementById("sparky_block_button").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "sparky_button",
                 style: {},
@@ -3061,16 +3647,11 @@ function sparky_modal(modal_type) {
                 type: "button",
                 content: "My Button"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add list block
         document.getElementById("sparky_block_list").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "",
                 style: {},
@@ -3078,32 +3659,22 @@ function sparky_modal(modal_type) {
                 listType: "ul",
                 content: "<li>Lorem ipsum</li><li>Dolor sit amet</li><li>Consectetuer adipiscing</li>"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add Iframe block
         document.getElementById("sparky_block_iframe").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "",
                 style: {},
                 src: "",
                 type: "iframe"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add video block
         document.getElementById("sparky_block_video").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "",
                 style: {},
@@ -3117,16 +3688,11 @@ function sparky_modal(modal_type) {
                 muted: false,
                 type: "video"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add audio block
         document.getElementById("sparky_block_audio").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "",
                 style: {},
@@ -3139,16 +3705,11 @@ function sparky_modal(modal_type) {
                 muted: false,
                 type: "audio"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add icon block
         document.getElementById("sparky_block_icon").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "fa-check-circle",
                 category: "fas",
@@ -3157,16 +3718,11 @@ function sparky_modal(modal_type) {
                 style: {},
                 type: "icon"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add social block
         document.getElementById("sparky_block_social").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "sparky_social_icons",
                 style: {},
@@ -3185,42 +3741,28 @@ function sparky_modal(modal_type) {
                 link6: "",
                 type: "social"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add custom html block
         document.getElementById("sparky_block_customhtml").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "",
                 class: "sparky_custom_html",
                 style: {},
                 content: "",
                 type: "customhtml"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
         // add joomla module block
         document.getElementById("sparky_block_joomlamodule").onclick = function(event) {
-
-            sparkyPageContentArray[sparkyBlockPosition[0]].content[sparkyBlockPosition[1]].content.push({
+            addNewBlockToColumn({
                 id: "sparky_joomla_module_id0",
                 class: "sparky_joomla_module",
                 style: {},
                 content: "{loadmoduleid 0}",
                 type: "joomlamodule"
             });
-
-            modal.style.display = "none";
-            refreshSparky();
-
         }
 
     }
@@ -3382,6 +3924,9 @@ function sparky_modal(modal_type) {
 
             // heading link
             block.link = document.getElementById("heading_link").value;
+            if (block.link) {
+                block.content = removeLinksFromHtml(block.content);
+            }
 
             // heading link target
             if ( document.getElementById("heading_target").value === "blank" ) {
@@ -4561,13 +5106,15 @@ function sparky_modal(modal_type) {
     if (modal_type === "add_link_modal") {
 
         let currentLink = false;
+        const selection = window.getSelection();
+        const anchorNode = selection ? (selection.anchorNode || selection.baseNode) : null;
 
         // if selected text is inside link
-        if ( window.getSelection().baseNode.parentNode.nodeName === "A" ) {
+        if (anchorNode && anchorNode.parentNode.nodeName === "A") {
 
             modal.style.display = "block";
 
-            currentLink = window.getSelection().baseNode.parentNode;
+            currentLink = anchorNode.parentNode;
 
             // assign current link value to the modal input
             document.getElementById("add_link_link").value = currentLink.getAttribute("href");
@@ -4583,7 +5130,7 @@ function sparky_modal(modal_type) {
         } else {
 
             var linkURL = prompt('Enter a URL:', 'https://');
-            var selectedText = window.getSelection();
+            var selectedText = selection;
 
             document.execCommand('insertHTML', false, '<a href="' + linkURL + '">' + selectedText + '</a>');
 
