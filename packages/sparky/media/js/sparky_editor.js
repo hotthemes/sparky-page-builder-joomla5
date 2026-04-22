@@ -2735,8 +2735,6 @@ function refreshSparky() {
     applyPendingBlockControlScroll();
     recordSparkyHistoryState();
 
-    console.log(sparkyPageContentArray)
-
 }
 
 function determineColumnsNumber(str) {
