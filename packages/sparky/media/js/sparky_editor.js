@@ -1306,52 +1306,21 @@ sparkyPageContentEditable.addEventListener('input', function(event) {
     
     // When content is edited update array
 
-    let targetElement = event.target.nodeType === Node.TEXT_NODE ? event.target.parentElement : event.target;
-    let blockElement = targetElement;
-    while (
-        blockElement
-        &&
-        blockElement !== sparkyPageContentEditable
-        &&
-        (!blockElement.previousElementSibling || !blockElement.previousElementSibling.classList.contains("block_settings_buttons"))
-    ) {
-        blockElement = blockElement.parentElement;
-    }
-
-    if (!blockElement || blockElement === sparkyPageContentEditable) {
-        return;
-    }
-
     // Find block position in array
-    let rowElement = blockElement.closest(".sparky_page_row");
-    let columnElement = blockElement.closest(".sparky_cell");
-    if (!rowElement || !columnElement) {
-        return;
-    }
+    let row = event.target.parentNode.parentNode.parentNode.className;
+    row = row.split("sparky_row")[row.split("sparky_row").length-1];
 
-    let rowMatch = rowElement.className.match(/sparky_row(\d+)/);
-    if (!rowMatch) {
-        return;
-    }
-    let row = Number(rowMatch[1]);
+    let column = event.target.parentNode.className;
+    column = column.split("sparky_col")[column.split("sparky_col").length-1];
 
-    let columnMatch = columnElement.className.match(/sparky_col(\d+)/);
-    if (!columnMatch) {
-        return;
-    }
-    let column = Number(columnMatch[1]);
-
-    let blockMatch = blockElement.previousElementSibling.className.match(/sparky_block(\d+)/);
-    if (!blockMatch) {
-        return;
-    }
-    let block = Number(blockMatch[1]);
+    let block = event.target.previousSibling.className;
+    block = block.split("sparky_block")[block.split("sparky_block").length-1];
 
     // Update array
-    if (blockElement.nodeName === "TEXTAREA") {
-        sparkyPageContentArray[row].content[column].content[block].content = blockElement.value;
+    if (event.target.nodeName === "TEXTAREA") {
+        sparkyPageContentArray[row].content[column].content[block].content = event.target.value;
     } else {
-        sparkyPageContentArray[row].content[column].content[block].content = normalizeBoldTagsInHtml(blockElement.innerHTML);
+        sparkyPageContentArray[row].content[column].content[block].content = normalizeBoldTagsInHtml(event.target.innerHTML);
     }
     
     // Update HTML in the textarea (can't use refreshSparky(), it blocks typing)
@@ -1421,8 +1390,6 @@ sparkyPageContentEditable.addEventListener("paste", function(event) {
 
 
 function sparkyEditorButtonsEvents() {
-
-    initBlockToolbarVisibility();
 
     // add row event
 
@@ -2048,74 +2015,6 @@ function sparkyEditorButtonsEvents() {
 
     });
 
-}
-
-function initBlockToolbarVisibility() {
-    let blockToolbars = document.getElementsByClassName("block_settings_buttons");
-
-    Array.from(blockToolbars).forEach(function(toolbar) {
-        let blockElement = toolbar.nextElementSibling;
-        if (!blockElement) {
-            return;
-        }
-        let hideToolbarTimer = null;
-        let showToolbarTimer = null;
-
-        toolbar.classList.remove("block_toolbar_visible");
-        blockElement.classList.remove("block_hover_shift");
-
-        let clearHideToolbarTimer = function() {
-            if (hideToolbarTimer !== null) {
-                window.clearTimeout(hideToolbarTimer);
-                hideToolbarTimer = null;
-            }
-        };
-
-        let clearShowToolbarTimer = function() {
-            if (showToolbarTimer !== null) {
-                window.clearTimeout(showToolbarTimer);
-                showToolbarTimer = null;
-            }
-        };
-
-        let showToolbar = function() {
-            clearShowToolbarTimer();
-            clearHideToolbarTimer();
-            toolbar.classList.add("block_toolbar_visible");
-            blockElement.classList.add("block_hover_shift");
-        };
-
-        let hideToolbarIfInactive = function() {
-            if (toolbar.contains(document.activeElement) || blockElement.contains(document.activeElement)) {
-                return;
-            }
-            toolbar.classList.remove("block_toolbar_visible");
-            blockElement.classList.remove("block_hover_shift");
-        };
-
-        let scheduleHideToolbarIfInactive = function() {
-            clearShowToolbarTimer();
-            clearHideToolbarTimer();
-            hideToolbarTimer = window.setTimeout(hideToolbarIfInactive, 120);
-        };
-
-        let scheduleShowToolbar = function() {
-            clearShowToolbarTimer();
-            clearHideToolbarTimer();
-            showToolbarTimer = window.setTimeout(showToolbar, 1000);
-        };
-
-        toolbar.addEventListener("mouseenter", scheduleShowToolbar);
-        blockElement.addEventListener("mouseenter", scheduleShowToolbar);
-
-        toolbar.addEventListener("mouseleave", scheduleHideToolbarIfInactive);
-        blockElement.addEventListener("mouseleave", scheduleHideToolbarIfInactive);
-
-        blockElement.addEventListener("focusin", showToolbar);
-        blockElement.addEventListener("focusout", function() {
-            scheduleHideToolbarIfInactive();
-        });
-    });
 }
 sparkyEditorButtonsEvents();
 initSparkyUndoRedoToolbarButtons();
@@ -2828,33 +2727,38 @@ function determineBlockType(str) {
 }
 
 function determineRowPosition(str) {
-    let rowMatch = String(str).match(/sparky_row(\d+)/);
-    return rowMatch ? rowMatch[1] : "";
+
+    let rowClasses = str.split("sparky_row");
+    let row = rowClasses[rowClasses.length-1];
+
+    return row;
 }
 
 function determineColumnPosition(str) {
-    let columnMatch = String(str).match(/sparky_col(\d+)/);
-    return columnMatch ? columnMatch[1] : "";
+
+    let columnClasses = str.split("sparky_col");
+    let column = columnClasses[columnClasses.length-1];
+
+    return column;
 }
 
 function determineBlockPosition(arr) {
 
     // arr: [row class, column class, block settings class]
 
-    let row = determineRowPosition(arr[0]);
-    let col = determineColumnPosition(arr[1]);
-    let block = "";
+    let row = arr[0].split("sparky_row");
+    let col = arr[1].split("sparky_col");
+    let block = [];
 
     // for new blocks, the third argument is not provided
     if (arr[2]) {
-        let blockMatch = String(arr[2]).match(/sparky_block(\d+)/);
-        block = blockMatch ? blockMatch[1] : "";
+        block = arr[2].split("sparky_block");
     }
-    if (block !== "") {
-        return [ row, col, block ];
+    if (block[1]) {
+        return [ row[row.length-1], col[col.length-1], block[block.length-1] ];
     }
 
-    return [ row, col ];
+    return [ row[row.length-1], col[col.length-1] ];
 }
 
 function filterRowClass(str) {
